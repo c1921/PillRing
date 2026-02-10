@@ -1,0 +1,105 @@
+<resources>
+    <string name="app_name">PillRing</string>
+    <string name="test_page_title">提醒计划</string>
+    <string name="test_page_description">管理每日计划并确保提醒可靠送达。</string>
+    <string name="home_overview_title">今日概览</string>
+
+    <string name="label_selected_time">已选时间：%1$s</string>
+    <string name="label_plan_count">计划：%1$d/%2$d</string>
+    <string name="label_plan_name">计划名称</string>
+    <string name="label_name_length">%1$d/%2$d</string>
+
+    <string name="btn_select_time">选择时间</string>
+    <string name="btn_add_plan">添加计划</string>
+    <string name="btn_edit_plan">编辑</string>
+    <string name="btn_delete_plan">删除</string>
+    <string name="btn_move_up">上移</string>
+    <string name="btn_move_down">下移</string>
+    <string name="btn_enable_plan">启用每日计划</string>
+    <string name="btn_disable_plan">停用每日计划</string>
+    <string name="btn_confirm_stop_reminder">确认并停止本轮提醒</string>
+    <string name="btn_confirm_stop_plan_reminder">确认并停止该计划提醒</string>
+    <string name="btn_open_settings_page">设置</string>
+    <string name="btn_back_to_test_page">返回</string>
+    <string name="cd_open_settings">打开设置</string>
+    <string name="cd_navigate_back">返回上一页</string>
+    <string name="cd_more_plan_actions">更多计划操作</string>
+
+    <string name="dialog_add_plan_title">添加计划</string>
+    <string name="dialog_edit_plan_title">编辑计划</string>
+    <string name="dialog_btn_save">保存</string>
+    <string name="dialog_btn_cancel">取消</string>
+
+    <string name="msg_notification_permission_required">需要通知权限。</string>
+    <string name="msg_notification_permission_denied">通知权限被拒绝。</string>
+    <string name="msg_exact_alarm_required">需要精确闹钟权限。</string>
+    <string name="msg_exact_alarm_failed">安排精确闹钟失败。</string>
+    <string name="msg_plan_enabled">已启用每日提醒计划。</string>
+    <string name="msg_plan_disabled">已停用每日提醒计划。</string>
+    <string name="msg_time_saved">提醒时间已保存。</string>
+    <string name="msg_time_updated_rescheduled">提醒时间已更新，并重新安排下一次触发。</string>
+    <string name="msg_time_updated_reschedule_failed">时间已保存，但重新安排下一次触发失败。</string>
+    <string name="msg_reminder_stopped">本轮提醒已停止。</string>
+    <string name="msg_open_settings_failed">无法打开该项的设置。</string>
+    <string name="msg_plan_limit_reached">最多可添加 10 个计划。</string>
+    <string name="msg_plan_name_required">计划名称不能为空。</string>
+    <string name="msg_plan_save_failed">保存计划失败。</string>
+    <string name="msg_plan_added_enabled">已添加并启用 %1$s。</string>
+    <string name="msg_plan_updated">计划已更新。</string>
+    <string name="msg_plan_enabled_name">已启用 %1$s。</string>
+    <string name="msg_plan_disabled_name">已停用 %1$s。</string>
+    <string name="msg_plan_deleted">已删除 %1$s。</string>
+    <string name="msg_reminder_stopped_plan">已停止 %1$s 的当前提醒。</string>
+
+    <string name="notification_channel_name">吃药提醒</string>
+    <string name="notification_channel_description">用于药物计划的高优先级提醒通知。</string>
+    <string name="notification_title_ongoing">吃药提醒</string>
+    <string name="notification_text_ongoing">该吃药了。</string>
+    <string name="notification_title_with_plan">%1$s 提醒</string>
+    <string name="notification_text_with_plan_time">%1$s，时间 %2$s。该吃药了。</string>
+
+    <string name="status_plan_enabled">计划已启用。</string>
+    <string name="status_plan_disabled">计划已停用。</string>
+    <string name="status_reminder_active">提醒正在进行，确认后可停止本轮。</string>
+    <string name="status_reminder_active_multi">至少有一个计划提醒正在进行。</string>
+    <string name="status_reminder_idle">当前没有进行中的提醒。</string>
+    <string name="empty_plan_list">还没有计划，先添加一个吧。</string>
+    <string name="default_plan_name">计划 %1$d</string>
+
+    <string name="settings_page_title">设置</string>
+    <string name="settings_page_description">查看权限健康状态并修复影响提醒可靠性的设置项。</string>
+    <string name="settings_language_title">语言</string>
+    <string name="settings_language_dialog_title">应用语言</string>
+    <string name="settings_language_option_system">跟随系统</string>
+    <string name="settings_language_option_english">English</string>
+    <string name="settings_language_option_chinese">简体中文</string>
+    <string name="settings_language_summary_follow_system">跟随系统（当前：%1$s）</string>
+    <string name="settings_language_summary_english">English</string>
+    <string name="settings_language_summary_chinese">简体中文</string>
+    <string name="settings_language_effective_english">English</string>
+    <string name="settings_language_effective_chinese">中文</string>
+
+    <string name="permission_health_title">权限健康检查</string>
+    <string name="permission_health_description">检查提醒相关权限，并在需要时打开系统设置。</string>
+    <string name="permission_item_notification_title">通知权限</string>
+    <string name="permission_item_notification_detail">显示弹窗提醒所必需。</string>
+    <string name="permission_item_exact_alarm_title">精确闹钟权限</string>
+    <string name="permission_item_exact_alarm_detail">精确触发提醒时间所必需。</string>
+    <string name="permission_item_battery_optimization_title">电池优化豁免</string>
+    <string name="permission_item_battery_optimization_detail">为稳定后台提醒送达，请关闭电池优化。</string>
+    <string name="permission_item_background_restriction_title">后台限制</string>
+    <string name="permission_item_background_restriction_detail">后台限制可能影响提醒可靠性。</string>
+    <string name="permission_item_autostart_title">自启动（小米/HyperOS）</string>
+    <string name="permission_item_autostart_detail">系统 API 无法读取该开关。请在小米设置中手动确认。</string>
+    <string name="permission_status_ok">正常</string>
+    <string name="permission_status_needs_action">需处理</string>
+    <string name="permission_status_manual_check">需手动检查</string>
+    <string name="permission_status_unavailable">该设备不支持</string>
+    <string name="permission_action_open_settings">打开设置</string>
+
+    <string name="reason_plan_enabled">从首页启用了每日提醒计划。</string>
+    <string name="reason_time_updated">在计划启用状态下更新了提醒时间。</string>
+    <string name="reason_daily_scheduled">由计划触发的每日提醒。</string>
+    <string name="reason_delete_fallback">通知被清除；30 秒后触发兜底提醒。此前原因：%1$s</string>
+    <string name="reason_unknown">未知</string>
+</resources>

@@ -11,6 +11,7 @@ import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -21,6 +22,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.selection.selectable
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
@@ -42,6 +44,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
@@ -62,6 +65,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLifecycleOwner
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
@@ -74,6 +78,8 @@ import io.github.c1921.pillring.notification.ReminderPlan
 import io.github.c1921.pillring.notification.ReminderScheduler
 import io.github.c1921.pillring.notification.ReminderSessionStore
 import io.github.c1921.pillring.notification.ReminderTimeCalculator
+import io.github.c1921.pillring.locale.AppLanguage
+import io.github.c1921.pillring.locale.AppLanguageManager
 import io.github.c1921.pillring.permission.PermissionAction
 import io.github.c1921.pillring.permission.PermissionHealthChecker
 import io.github.c1921.pillring.permission.PermissionHealthItem
@@ -118,6 +124,14 @@ class MainActivity : ComponentActivity() {
             var permissionItems by remember {
                 mutableStateOf(buildPermissionItems())
             }
+            var selectedLanguage by remember {
+                mutableStateOf(AppLanguageManager.getSelectedLanguage(this@MainActivity))
+            }
+            var effectiveLanguageForSummary by remember {
+                mutableStateOf(
+                    AppLanguageManager.getEffectiveLanguageForSummary(this@MainActivity)
+                )
+            }
             var currentScreen by rememberSaveable {
                 mutableStateOf(AppScreen.HOME)
             }
@@ -131,6 +145,10 @@ class MainActivity : ComponentActivity() {
                     if (event == Lifecycle.Event.ON_RESUME) {
                         plans = loadPlans()
                         permissionItems = buildPermissionItems()
+                        selectedLanguage =
+                            AppLanguageManager.getSelectedLanguage(this@MainActivity)
+                        effectiveLanguageForSummary =
+                            AppLanguageManager.getEffectiveLanguageForSummary(this@MainActivity)
                     }
                 }
                 lifecycleOwner.lifecycle.addObserver(observer)
@@ -207,8 +225,25 @@ class MainActivity : ComponentActivity() {
                     AppScreen.SETTINGS -> {
                         SettingsScreen(
                             permissionItems = permissionItems,
+                            selectedLanguage = selectedLanguage,
+                            effectiveLanguageForSummary = effectiveLanguageForSummary,
                             onBackClick = { currentScreen = AppScreen.HOME },
-                            onOpenPermissionSettings = ::openPermissionSettings
+                            onOpenPermissionSettings = ::openPermissionSettings,
+                            onLanguageSelected = { language ->
+                                val changed = AppLanguageManager.applyLanguage(
+                                    context = this@MainActivity,
+                                    language = language
+                                )
+                                selectedLanguage =
+                                    AppLanguageManager.getSelectedLanguage(this@MainActivity)
+                                effectiveLanguageForSummary =
+                                    AppLanguageManager.getEffectiveLanguageForSummary(
+                                        this@MainActivity
+                                    )
+                                if (changed) {
+                                    recreate()
+                                }
+                            }
                         )
                     }
                 }
@@ -1105,8 +1140,11 @@ private fun formatReminderTime(
 @OptIn(ExperimentalMaterial3Api::class)
 private fun SettingsScreen(
     permissionItems: List<PermissionHealthItem>,
+    selectedLanguage: AppLanguage,
+    effectiveLanguageForSummary: AppLanguage,
     onBackClick: () -> Unit,
-    onOpenPermissionSettings: (PermissionAction) -> Unit
+    onOpenPermissionSettings: (PermissionAction) -> Unit,
+    onLanguageSelected: (AppLanguage) -> Unit
 ) {
     Scaffold(
         modifier = Modifier.fillMaxSize(),
@@ -1156,12 +1194,165 @@ private fun SettingsScreen(
                 }
             }
             item {
+                LanguageSettingsCard(
+                    selectedLanguage = selectedLanguage,
+                    effectiveLanguageForSummary = effectiveLanguageForSummary,
+                    onLanguageSelected = onLanguageSelected
+                )
+            }
+            item {
                 PermissionHealthPanel(
                     items = permissionItems,
                     onOpenPermissionSettings = onOpenPermissionSettings
                 )
             }
         }
+    }
+}
+
+@Composable
+private fun LanguageSettingsCard(
+    selectedLanguage: AppLanguage,
+    effectiveLanguageForSummary: AppLanguage,
+    onLanguageSelected: (AppLanguage) -> Unit
+) {
+    var showDialog by rememberSaveable {
+        mutableStateOf(false)
+    }
+    val summaryText = languageSummaryText(
+        selectedLanguage = selectedLanguage,
+        effectiveLanguageForSummary = effectiveLanguageForSummary
+    )
+
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .testTag(UiTestTags.SETTINGS_LANGUAGE_ITEM)
+            .clickable { showDialog = true },
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceContainerHigh
+        )
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Text(
+                text = stringResource(R.string.settings_language_title),
+                style = MaterialTheme.typography.titleMedium
+            )
+            Text(
+                text = summaryText,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+    }
+
+    if (showDialog) {
+        AlertDialog(
+            onDismissRequest = { showDialog = false },
+            title = {
+                Text(text = stringResource(R.string.settings_language_dialog_title))
+            },
+            text = {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .testTag(UiTestTags.SETTINGS_LANGUAGE_DIALOG),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    LanguageOptionRow(
+                        text = stringResource(R.string.settings_language_option_system),
+                        selected = selectedLanguage == AppLanguage.SYSTEM,
+                        testTag = UiTestTags.SETTINGS_LANGUAGE_OPTION_SYSTEM,
+                        onClick = {
+                            onLanguageSelected(AppLanguage.SYSTEM)
+                            showDialog = false
+                        }
+                    )
+                    LanguageOptionRow(
+                        text = stringResource(R.string.settings_language_option_english),
+                        selected = selectedLanguage == AppLanguage.ENGLISH,
+                        testTag = UiTestTags.SETTINGS_LANGUAGE_OPTION_ENGLISH,
+                        onClick = {
+                            onLanguageSelected(AppLanguage.ENGLISH)
+                            showDialog = false
+                        }
+                    )
+                    LanguageOptionRow(
+                        text = stringResource(R.string.settings_language_option_chinese),
+                        selected = selectedLanguage == AppLanguage.CHINESE_SIMPLIFIED,
+                        testTag = UiTestTags.SETTINGS_LANGUAGE_OPTION_CHINESE,
+                        onClick = {
+                            onLanguageSelected(AppLanguage.CHINESE_SIMPLIFIED)
+                            showDialog = false
+                        }
+                    )
+                }
+            },
+            confirmButton = {},
+            dismissButton = {
+                TextButton(onClick = { showDialog = false }) {
+                    Text(text = stringResource(R.string.dialog_btn_cancel))
+                }
+            }
+        )
+    }
+}
+
+@Composable
+private fun LanguageOptionRow(
+    text: String,
+    selected: Boolean,
+    testTag: String,
+    onClick: () -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .selectable(
+                selected = selected,
+                role = Role.RadioButton,
+                onClick = onClick
+            )
+            .testTag(testTag)
+            .padding(vertical = 4.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        RadioButton(
+            selected = selected,
+            onClick = null
+        )
+        Text(
+            text = text,
+            modifier = Modifier.padding(start = 8.dp)
+        )
+    }
+}
+
+@Composable
+private fun languageSummaryText(
+    selectedLanguage: AppLanguage,
+    effectiveLanguageForSummary: AppLanguage
+): String {
+    return when (selectedLanguage) {
+        AppLanguage.SYSTEM -> {
+            val effectiveLanguageLabel = stringResource(
+                if (effectiveLanguageForSummary == AppLanguage.CHINESE_SIMPLIFIED) {
+                    R.string.settings_language_effective_chinese
+                } else {
+                    R.string.settings_language_effective_english
+                }
+            )
+            stringResource(
+                R.string.settings_language_summary_follow_system,
+                effectiveLanguageLabel
+            )
+        }
+
+        AppLanguage.ENGLISH -> stringResource(R.string.settings_language_summary_english)
+        AppLanguage.CHINESE_SIMPLIFIED -> stringResource(R.string.settings_language_summary_chinese)
     }
 }
 
@@ -1311,8 +1502,11 @@ private fun SettingsScreenPreview() {
                     action = PermissionAction.OPEN_NOTIFICATION_SETTINGS
                 )
             ),
+            selectedLanguage = AppLanguage.SYSTEM,
+            effectiveLanguageForSummary = AppLanguage.ENGLISH,
             onBackClick = {},
-            onOpenPermissionSettings = {}
+            onOpenPermissionSettings = {},
+            onLanguageSelected = {}
         )
     }
 }

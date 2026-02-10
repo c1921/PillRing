@@ -68,6 +68,16 @@
 
     <string name="settings_page_title">Settings</string>
     <string name="settings_page_description">Review permission health and fix issues that affect reminder reliability.</string>
+    <string name="settings_language_title">Language</string>
+    <string name="settings_language_dialog_title">App language</string>
+    <string name="settings_language_option_system">Follow system</string>
+    <string name="settings_language_option_english">English</string>
+    <string name="settings_language_option_chinese">Simplified Chinese</string>
+    <string name="settings_language_summary_follow_system">Follow system (current: %1$s)</string>
+    <string name="settings_language_summary_english">English</string>
+    <string name="settings_language_summary_chinese">Simplified Chinese</string>
+    <string name="settings_language_effective_english">English</string>
+    <string name="settings_language_effective_chinese">中文</string>
 
     <string name="permission_health_title">Permission Health</string>
     <string name="permission_health_description">Check reminder-related permissions and open system settings when needed.</string>
