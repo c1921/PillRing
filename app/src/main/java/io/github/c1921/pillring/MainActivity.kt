@@ -1,7 +1,6 @@
 package io.github.c1921.pillring
 
 import android.Manifest
-import android.app.TimePickerDialog
 import android.content.Context
 import android.content.pm.PackageManager
 import android.os.Bundle
@@ -12,23 +11,36 @@ import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
+import androidx.compose.material3.ElevatedCard
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.TimePicker
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.rememberTimePickerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
@@ -40,6 +52,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLifecycleOwner
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -56,6 +69,7 @@ import io.github.c1921.pillring.permission.PermissionHealthChecker
 import io.github.c1921.pillring.permission.PermissionHealthItem
 import io.github.c1921.pillring.permission.PermissionSettingsNavigator
 import io.github.c1921.pillring.permission.PermissionState
+import io.github.c1921.pillring.ui.UiTestTags
 import io.github.c1921.pillring.ui.theme.PillRingTheme
 import java.time.LocalDateTime
 import java.time.LocalTime
@@ -534,6 +548,7 @@ class MainActivity : ComponentActivity() {
 }
 
 @Composable
+@OptIn(ExperimentalMaterial3Api::class)
 private fun ReminderHomeScreen(
     plans: List<ReminderPlan>,
     maxPlans: Int,
@@ -546,65 +561,110 @@ private fun ReminderHomeScreen(
     onConfirmStopClick: (ReminderPlan) -> Unit,
     onOpenSettingsClick: () -> Unit
 ) {
-    Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
-        Column(
+    val hasActiveReminder = plans.any { it.isReminderActive }
+
+    Scaffold(
+        modifier = Modifier.fillMaxSize(),
+        topBar = {
+            TopAppBar(
+                title = {
+                    Text(
+                        text = stringResource(R.string.test_page_title),
+                        style = MaterialTheme.typography.headlineSmall
+                    )
+                },
+                actions = {
+                    TextButton(onClick = onOpenSettingsClick) {
+                        Text(text = stringResource(R.string.btn_open_settings_page))
+                    }
+                }
+            )
+        }
+    ) { innerPadding ->
+        LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding)
-                .padding(24.dp)
-                .verticalScroll(rememberScrollState()),
+                .padding(horizontal = 16.dp),
+            contentPadding = PaddingValues(top = 16.dp, bottom = 24.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            Text(
-                text = stringResource(R.string.test_page_title),
-                style = MaterialTheme.typography.headlineSmall
-            )
-            Text(text = stringResource(R.string.test_page_description))
-            Text(text = stringResource(R.string.label_plan_count, plans.size, maxPlans))
-            Text(
-                text = stringResource(
-                    if (plans.any { it.isReminderActive }) {
-                        R.string.status_reminder_active_multi
-                    } else {
-                        R.string.status_reminder_idle
+            item {
+                Surface(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = MaterialTheme.shapes.large,
+                    tonalElevation = 2.dp
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Text(
+                            text = stringResource(R.string.test_page_description),
+                            style = MaterialTheme.typography.bodyMedium
+                        )
+                        Text(
+                            text = stringResource(R.string.label_plan_count, plans.size, maxPlans),
+                            style = MaterialTheme.typography.titleMedium
+                        )
+                        Text(
+                            text = stringResource(
+                                if (hasActiveReminder) {
+                                    R.string.status_reminder_active_multi
+                                } else {
+                                    R.string.status_reminder_idle
+                                }
+                            ),
+                            color = if (hasActiveReminder) {
+                                MaterialTheme.colorScheme.error
+                            } else {
+                                MaterialTheme.colorScheme.primary
+                            },
+                            style = MaterialTheme.typography.bodyMedium
+                        )
                     }
-                )
-            )
+                }
+            }
 
-            Button(
-                onClick = onAddPlanClick,
-                enabled = plans.size < maxPlans,
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Text(text = stringResource(R.string.btn_add_plan))
+            item {
+                Button(
+                    onClick = onAddPlanClick,
+                    enabled = plans.size < maxPlans,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text(text = stringResource(R.string.btn_add_plan))
+                }
             }
 
             if (plans.isEmpty()) {
-                Text(
-                    text = stringResource(R.string.empty_plan_list),
-                    style = MaterialTheme.typography.bodyMedium
-                )
-            }
-
-            plans.forEachIndexed { index, plan ->
-                PlanCard(
-                    plan = plan,
-                    index = index,
-                    totalCount = plans.size,
-                    onEditClick = { onEditPlanClick(plan) },
-                    onDeleteClick = { onDeletePlanClick(plan) },
-                    onMoveUpClick = { onMoveUpClick(plan) },
-                    onMoveDownClick = { onMoveDownClick(plan) },
-                    onPlanEnabledChange = { enabled -> onPlanEnabledChange(plan, enabled) },
-                    onConfirmStopClick = { onConfirmStopClick(plan) }
-                )
-            }
-
-            Button(
-                onClick = onOpenSettingsClick,
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Text(text = stringResource(R.string.btn_open_settings_page))
+                item {
+                    Card(modifier = Modifier.fillMaxWidth()) {
+                        Text(
+                            text = stringResource(R.string.empty_plan_list),
+                            style = MaterialTheme.typography.bodyMedium,
+                            modifier = Modifier.padding(16.dp)
+                        )
+                    }
+                }
+            } else {
+                itemsIndexed(
+                    items = plans,
+                    key = { _, plan -> plan.id }
+                ) { index, plan ->
+                    PlanCard(
+                        plan = plan,
+                        index = index,
+                        totalCount = plans.size,
+                        onEditClick = { onEditPlanClick(plan) },
+                        onDeleteClick = { onDeletePlanClick(plan) },
+                        onMoveUpClick = { onMoveUpClick(plan) },
+                        onMoveDownClick = { onMoveDownClick(plan) },
+                        onPlanEnabledChange = { enabled -> onPlanEnabledChange(plan, enabled) },
+                        onConfirmStopClick = { onConfirmStopClick(plan) }
+                    )
+                }
             }
         }
     }
@@ -631,12 +691,12 @@ private fun PlanCard(
         )
     }
 
-    Card(modifier = Modifier.fillMaxWidth()) {
+    ElevatedCard(modifier = Modifier.fillMaxWidth()) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
+            verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -681,8 +741,12 @@ private fun PlanCard(
                 ) {
                     Text(text = stringResource(R.string.btn_edit_plan))
                 }
-                Button(
+                OutlinedButton(
                     onClick = onDeleteClick,
+                    colors = ButtonDefaults.outlinedButtonColors(
+                        contentColor = MaterialTheme.colorScheme.error
+                    ),
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.error),
                     modifier = Modifier.weight(1f)
                 ) {
                     Text(text = stringResource(R.string.btn_delete_plan))
@@ -693,14 +757,14 @@ private fun PlanCard(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                Button(
+                OutlinedButton(
                     onClick = onMoveUpClick,
                     enabled = index > 0,
                     modifier = Modifier.weight(1f)
                 ) {
                     Text(text = stringResource(R.string.btn_move_up))
                 }
-                Button(
+                OutlinedButton(
                     onClick = onMoveDownClick,
                     enabled = index < totalCount - 1,
                     modifier = Modifier.weight(1f)
@@ -710,8 +774,12 @@ private fun PlanCard(
             }
 
             if (plan.isReminderActive) {
-                Button(
+                FilledTonalButton(
                     onClick = onConfirmStopClick,
+                    colors = ButtonDefaults.filledTonalButtonColors(
+                        containerColor = MaterialTheme.colorScheme.errorContainer,
+                        contentColor = MaterialTheme.colorScheme.onErrorContainer
+                    ),
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Text(text = stringResource(R.string.btn_confirm_stop_plan_reminder))
@@ -739,6 +807,9 @@ private fun PlanEditorDialog(
     }
     var minute by rememberSaveable(initialMinute, planId) {
         mutableStateOf(initialMinute)
+    }
+    var showTimePicker by rememberSaveable(planId) {
+        mutableStateOf(false)
     }
     val context = LocalContext.current
     val selectedTimeText = remember(hour, minute, context) {
@@ -772,32 +843,40 @@ private fun PlanEditorDialog(
                         }
                     },
                     label = { Text(stringResource(R.string.label_plan_name)) },
+                    supportingText = {
+                        Text(
+                            text = stringResource(
+                                R.string.label_name_length,
+                                name.length,
+                                maxNameLength
+                            )
+                        )
+                    },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth()
                 )
-                Text(
-                    text = stringResource(
-                        R.string.label_name_length,
-                        name.length,
-                        maxNameLength
-                    ),
-                    style = MaterialTheme.typography.bodySmall
-                )
-                Text(text = stringResource(R.string.label_selected_time, selectedTimeText))
-                Button(
+                Surface(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = MaterialTheme.shapes.medium,
+                    color = MaterialTheme.colorScheme.secondaryContainer
+                ) {
+                    Text(
+                        text = stringResource(R.string.label_selected_time, selectedTimeText),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSecondaryContainer,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 12.dp, vertical = 10.dp)
+                            .testTag(UiTestTags.PLAN_EDITOR_SELECTED_TIME)
+                    )
+                }
+                FilledTonalButton(
                     onClick = {
-                        TimePickerDialog(
-                            context,
-                            { _, hourOfDay, selectedMinute ->
-                                hour = hourOfDay
-                                minute = selectedMinute
-                            },
-                            hour,
-                            minute,
-                            DateFormat.is24HourFormat(context)
-                        ).show()
+                        showTimePicker = true
                     },
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .testTag(UiTestTags.PLAN_EDITOR_SELECT_TIME_BUTTON)
                 ) {
                     Text(text = stringResource(R.string.btn_select_time))
                 }
@@ -815,6 +894,71 @@ private fun PlanEditorDialog(
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
+                Text(text = stringResource(R.string.dialog_btn_cancel))
+            }
+        }
+    )
+
+    if (showTimePicker) {
+        PlanTimePickerDialog(
+            initialHour = hour,
+            initialMinute = minute,
+            is24Hour = DateFormat.is24HourFormat(context),
+            onDismiss = {
+                showTimePicker = false
+            },
+            onConfirm = { selectedHour, selectedMinute ->
+                hour = selectedHour
+                minute = selectedMinute
+                showTimePicker = false
+            }
+        )
+    }
+}
+
+@Composable
+@OptIn(ExperimentalMaterial3Api::class)
+private fun PlanTimePickerDialog(
+    initialHour: Int,
+    initialMinute: Int,
+    is24Hour: Boolean,
+    onDismiss: () -> Unit,
+    onConfirm: (Int, Int) -> Unit
+) {
+    val pickerState = rememberTimePickerState(
+        initialHour = initialHour,
+        initialMinute = initialMinute,
+        is24Hour = is24Hour
+    )
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Text(text = stringResource(R.string.btn_select_time))
+        },
+        text = {
+            TimePicker(
+                state = pickerState,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .testTag(UiTestTags.PLAN_TIME_PICKER)
+            )
+        },
+        confirmButton = {
+            TextButton(
+                onClick = {
+                    onConfirm(pickerState.hour, pickerState.minute)
+                },
+                modifier = Modifier.testTag(UiTestTags.PLAN_TIME_PICKER_CONFIRM)
+            ) {
+                Text(text = stringResource(R.string.dialog_btn_save))
+            }
+        },
+        dismissButton = {
+            TextButton(
+                onClick = onDismiss,
+                modifier = Modifier.testTag(UiTestTags.PLAN_TIME_PICKER_CANCEL)
+            ) {
                 Text(text = stringResource(R.string.dialog_btn_cancel))
             }
         }

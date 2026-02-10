@@ -2,10 +2,14 @@ package io.github.c1921.pillring.ui.theme
 
 import androidx.compose.ui.graphics.Color
 
-val Purple80 = Color(0xFFD0BCFF)
-val PurpleGrey80 = Color(0xFFCCC2DC)
-val Pink80 = Color(0xFFEFB8C8)
+val PrimaryDark = Color(0xFFA8C8FF)
+val SecondaryDark = Color(0xFF80D5CE)
+val TertiaryDark = Color(0xFFFFB4A8)
+val BackgroundDark = Color(0xFF111418)
+val SurfaceDark = Color(0xFF111418)
 
-val Purple40 = Color(0xFF6650a4)
-val PurpleGrey40 = Color(0xFF625b71)
-val Pink40 = Color(0xFF7D5260)
+val PrimaryLight = Color(0xFF2B6FB7)
+val SecondaryLight = Color(0xFF006A65)
+val TertiaryLight = Color(0xFF8C4A3F)
+val BackgroundLight = Color(0xFFF7F9FC)
+val SurfaceLight = Color(0xFFF7F9FC)
