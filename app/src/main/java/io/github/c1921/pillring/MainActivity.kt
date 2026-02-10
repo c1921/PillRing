@@ -11,8 +11,8 @@ import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -21,18 +21,27 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.outlined.Edit
+import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.FilledTonalButton
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
@@ -48,6 +57,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
@@ -562,6 +572,24 @@ private fun ReminderHomeScreen(
     onOpenSettingsClick: () -> Unit
 ) {
     val hasActiveReminder = plans.any { it.isReminderActive }
+    val canAddPlan = plans.size < maxPlans
+    val reminderStatusText = stringResource(
+        if (hasActiveReminder) {
+            R.string.status_reminder_active_multi
+        } else {
+            R.string.status_reminder_idle
+        }
+    )
+    val reminderStatusContainerColor = if (hasActiveReminder) {
+        MaterialTheme.colorScheme.errorContainer
+    } else {
+        MaterialTheme.colorScheme.secondaryContainer
+    }
+    val reminderStatusContentColor = if (hasActiveReminder) {
+        MaterialTheme.colorScheme.onErrorContainer
+    } else {
+        MaterialTheme.colorScheme.onSecondaryContainer
+    }
 
     Scaffold(
         modifier = Modifier.fillMaxSize(),
@@ -570,14 +598,49 @@ private fun ReminderHomeScreen(
                 title = {
                     Text(
                         text = stringResource(R.string.test_page_title),
-                        style = MaterialTheme.typography.headlineSmall
+                        style = MaterialTheme.typography.titleLarge
                     )
                 },
                 actions = {
-                    TextButton(onClick = onOpenSettingsClick) {
-                        Text(text = stringResource(R.string.btn_open_settings_page))
+                    IconButton(
+                        onClick = onOpenSettingsClick,
+                        modifier = Modifier.testTag(UiTestTags.HOME_SETTINGS_BUTTON)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Outlined.Settings,
+                            contentDescription = stringResource(R.string.cd_open_settings)
+                        )
                     }
                 }
+            )
+        },
+        floatingActionButton = {
+            ExtendedFloatingActionButton(
+                onClick = {
+                    if (canAddPlan) {
+                        onAddPlanClick()
+                    }
+                },
+                icon = {
+                    Icon(
+                        imageVector = Icons.Filled.Add,
+                        contentDescription = null
+                    )
+                },
+                text = {
+                    Text(text = stringResource(R.string.btn_add_plan))
+                },
+                containerColor = if (canAddPlan) {
+                    MaterialTheme.colorScheme.primaryContainer
+                } else {
+                    MaterialTheme.colorScheme.surfaceContainerHighest
+                },
+                contentColor = if (canAddPlan) {
+                    MaterialTheme.colorScheme.onPrimaryContainer
+                } else {
+                    MaterialTheme.colorScheme.onSurfaceVariant
+                },
+                modifier = Modifier.testTag(UiTestTags.HOME_ADD_PLAN_FAB)
             )
         }
     ) { innerPadding ->
@@ -586,66 +649,74 @@ private fun ReminderHomeScreen(
                 .fillMaxSize()
                 .padding(innerPadding)
                 .padding(horizontal = 16.dp),
-            contentPadding = PaddingValues(top = 16.dp, bottom = 24.dp),
+            contentPadding = PaddingValues(top = 16.dp, bottom = 96.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             item {
-                Surface(
+                Card(
                     modifier = Modifier.fillMaxWidth(),
-                    shape = MaterialTheme.shapes.large,
-                    tonalElevation = 2.dp
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.surfaceContainerHigh
+                    )
                 ) {
                     Column(
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(16.dp),
-                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                        verticalArrangement = Arrangement.spacedBy(10.dp)
                     ) {
                         Text(
-                            text = stringResource(R.string.test_page_description),
-                            style = MaterialTheme.typography.bodyMedium
-                        )
-                        Text(
-                            text = stringResource(R.string.label_plan_count, plans.size, maxPlans),
+                            text = stringResource(R.string.home_overview_title),
                             style = MaterialTheme.typography.titleMedium
                         )
                         Text(
-                            text = stringResource(
-                                if (hasActiveReminder) {
-                                    R.string.status_reminder_active_multi
-                                } else {
-                                    R.string.status_reminder_idle
-                                }
-                            ),
-                            color = if (hasActiveReminder) {
-                                MaterialTheme.colorScheme.error
-                            } else {
-                                MaterialTheme.colorScheme.primary
-                            },
-                            style = MaterialTheme.typography.bodyMedium
+                            text = stringResource(R.string.test_page_description),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
+                        Text(
+                            text = stringResource(R.string.label_plan_count, plans.size, maxPlans),
+                            style = MaterialTheme.typography.titleSmall
+                        )
+                        Surface(
+                            shape = MaterialTheme.shapes.small,
+                            color = reminderStatusContainerColor
+                        ) {
+                            Text(
+                                text = reminderStatusText,
+                                color = reminderStatusContentColor,
+                                style = MaterialTheme.typography.labelLarge,
+                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp)
+                            )
+                        }
                     }
-                }
-            }
-
-            item {
-                Button(
-                    onClick = onAddPlanClick,
-                    enabled = plans.size < maxPlans,
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Text(text = stringResource(R.string.btn_add_plan))
                 }
             }
 
             if (plans.isEmpty()) {
                 item {
-                    Card(modifier = Modifier.fillMaxWidth()) {
-                        Text(
-                            text = stringResource(R.string.empty_plan_list),
-                            style = MaterialTheme.typography.bodyMedium,
-                            modifier = Modifier.padding(16.dp)
+                    ElevatedCard(
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = CardDefaults.elevatedCardColors(
+                            containerColor = MaterialTheme.colorScheme.surfaceContainerLow
                         )
+                    ) {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(16.dp),
+                            verticalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            Text(
+                                text = stringResource(R.string.empty_plan_list),
+                                style = MaterialTheme.typography.titleSmall
+                            )
+                            Text(
+                                text = stringResource(R.string.btn_add_plan),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
                     }
                 }
             } else {
@@ -690,21 +761,40 @@ private fun PlanCard(
             minute = plan.minute
         )
     }
+    var showMenu by rememberSaveable(plan.id) {
+        mutableStateOf(false)
+    }
+    val planStatusContainerColor = if (plan.enabled) {
+        MaterialTheme.colorScheme.primaryContainer
+    } else {
+        MaterialTheme.colorScheme.surfaceContainerHighest
+    }
+    val planStatusContentColor = if (plan.enabled) {
+        MaterialTheme.colorScheme.onPrimaryContainer
+    } else {
+        MaterialTheme.colorScheme.onSurfaceVariant
+    }
 
-    ElevatedCard(modifier = Modifier.fillMaxWidth()) {
+    ElevatedCard(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.elevatedCardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceContainerLow
+        )
+    ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(10.dp)
+            verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                verticalAlignment = Alignment.Top
             ) {
                 Column(
                     modifier = Modifier.weight(1f),
-                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     Text(
                         text = plan.name,
@@ -712,65 +802,101 @@ private fun PlanCard(
                     )
                     Text(
                         text = stringResource(R.string.label_selected_time, timeText),
-                        style = MaterialTheme.typography.bodyMedium
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
-                    Text(
-                        text = stringResource(
-                            if (plan.enabled) {
-                                R.string.status_plan_enabled
-                            } else {
-                                R.string.status_plan_disabled
-                            }
-                        ),
-                        style = MaterialTheme.typography.bodySmall
-                    )
+                    Surface(
+                        shape = MaterialTheme.shapes.small,
+                        color = planStatusContainerColor
+                    ) {
+                        Text(
+                            text = stringResource(
+                                if (plan.enabled) {
+                                    R.string.status_plan_enabled
+                                } else {
+                                    R.string.status_plan_disabled
+                                }
+                            ),
+                            style = MaterialTheme.typography.labelLarge,
+                            color = planStatusContentColor,
+                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp)
+                        )
+                    }
                 }
-                Switch(
-                    checked = plan.enabled,
-                    onCheckedChange = onPlanEnabledChange
+                Column(
+                    horizontalAlignment = Alignment.End,
+                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    Switch(
+                        checked = plan.enabled,
+                        onCheckedChange = onPlanEnabledChange
+                    )
+                    Box {
+                        IconButton(
+                            onClick = { showMenu = true },
+                            modifier = Modifier.testTag(UiTestTags.PLAN_CARD_OVERFLOW_BUTTON)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Filled.MoreVert,
+                                contentDescription = stringResource(R.string.cd_more_plan_actions)
+                            )
+                        }
+                        DropdownMenu(
+                            expanded = showMenu,
+                            onDismissRequest = { showMenu = false }
+                        ) {
+                            DropdownMenuItem(
+                                text = {
+                                    Text(text = stringResource(R.string.btn_move_up))
+                                },
+                                enabled = index > 0,
+                                onClick = {
+                                    showMenu = false
+                                    onMoveUpClick()
+                                },
+                                modifier = Modifier.testTag(UiTestTags.PLAN_CARD_ACTION_MOVE_UP)
+                            )
+                            DropdownMenuItem(
+                                text = {
+                                    Text(text = stringResource(R.string.btn_move_down))
+                                },
+                                enabled = index < totalCount - 1,
+                                onClick = {
+                                    showMenu = false
+                                    onMoveDownClick()
+                                },
+                                modifier = Modifier.testTag(UiTestTags.PLAN_CARD_ACTION_MOVE_DOWN)
+                            )
+                            DropdownMenuItem(
+                                text = {
+                                    Text(
+                                        text = stringResource(R.string.btn_delete_plan),
+                                        color = MaterialTheme.colorScheme.error
+                                    )
+                                },
+                                onClick = {
+                                    showMenu = false
+                                    onDeleteClick()
+                                },
+                                modifier = Modifier.testTag(UiTestTags.PLAN_CARD_ACTION_DELETE)
+                            )
+                        }
+                    }
+                }
+            }
+
+            FilledTonalButton(
+                onClick = onEditClick,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Icon(
+                    imageVector = Icons.Outlined.Edit,
+                    contentDescription = null
                 )
-            }
-
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                Button(
-                    onClick = onEditClick,
-                    modifier = Modifier.weight(1f)
-                ) {
-                    Text(text = stringResource(R.string.btn_edit_plan))
-                }
-                OutlinedButton(
-                    onClick = onDeleteClick,
-                    colors = ButtonDefaults.outlinedButtonColors(
-                        contentColor = MaterialTheme.colorScheme.error
-                    ),
-                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.error),
-                    modifier = Modifier.weight(1f)
-                ) {
-                    Text(text = stringResource(R.string.btn_delete_plan))
-                }
-            }
-
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                OutlinedButton(
-                    onClick = onMoveUpClick,
-                    enabled = index > 0,
-                    modifier = Modifier.weight(1f)
-                ) {
-                    Text(text = stringResource(R.string.btn_move_up))
-                }
-                OutlinedButton(
-                    onClick = onMoveDownClick,
-                    enabled = index < totalCount - 1,
-                    modifier = Modifier.weight(1f)
-                ) {
-                    Text(text = stringResource(R.string.btn_move_down))
-                }
+                Text(
+                    text = stringResource(R.string.btn_edit_plan),
+                    modifier = Modifier.padding(start = 8.dp)
+                )
             }
 
             if (plan.isReminderActive) {
@@ -976,35 +1102,65 @@ private fun formatReminderTime(
 }
 
 @Composable
+@OptIn(ExperimentalMaterial3Api::class)
 private fun SettingsScreen(
     permissionItems: List<PermissionHealthItem>,
     onBackClick: () -> Unit,
     onOpenPermissionSettings: (PermissionAction) -> Unit
 ) {
-    Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
-        Column(
+    Scaffold(
+        modifier = Modifier.fillMaxSize(),
+        topBar = {
+            TopAppBar(
+                title = {
+                    Text(
+                        text = stringResource(R.string.settings_page_title),
+                        style = MaterialTheme.typography.titleLarge
+                    )
+                },
+                navigationIcon = {
+                    IconButton(
+                        onClick = onBackClick,
+                        modifier = Modifier.testTag(UiTestTags.SETTINGS_BACK_BUTTON)
+                    ) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = stringResource(R.string.cd_navigate_back)
+                        )
+                    }
+                }
+            )
+        }
+    ) { innerPadding ->
+        LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding)
-                .padding(24.dp)
-                .verticalScroll(rememberScrollState()),
+                .padding(horizontal = 16.dp),
+            contentPadding = PaddingValues(top = 16.dp, bottom = 24.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            Text(
-                text = stringResource(R.string.settings_page_title),
-                style = MaterialTheme.typography.headlineSmall
-            )
-            Text(text = stringResource(R.string.settings_page_description))
-            Button(
-                onClick = onBackClick,
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Text(text = stringResource(R.string.btn_back_to_test_page))
+            item {
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.surfaceContainerHigh
+                    )
+                ) {
+                    Text(
+                        text = stringResource(R.string.settings_page_description),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(16.dp)
+                    )
+                }
             }
-            PermissionHealthPanel(
-                items = permissionItems,
-                onOpenPermissionSettings = onOpenPermissionSettings
-            )
+            item {
+                PermissionHealthPanel(
+                    items = permissionItems,
+                    onOpenPermissionSettings = onOpenPermissionSettings
+                )
+            }
         }
     }
 }
@@ -1014,14 +1170,15 @@ private fun PermissionHealthPanel(
     items: List<PermissionHealthItem>,
     onOpenPermissionSettings: (PermissionAction) -> Unit
 ) {
-    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Text(
             text = stringResource(R.string.permission_health_title),
             style = MaterialTheme.typography.titleMedium
         )
         Text(
             text = stringResource(R.string.permission_health_description),
-            style = MaterialTheme.typography.bodyMedium
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
         )
 
         items.forEach { item ->
@@ -1038,25 +1195,37 @@ private fun PermissionHealthCard(
     item: PermissionHealthItem,
     onOpenPermissionSettings: (PermissionAction) -> Unit
 ) {
-    Card(modifier = Modifier.fillMaxWidth()) {
+    ElevatedCard(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.elevatedCardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceContainerLow
+        )
+    ) {
         Column(
             modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
+            verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
             Text(
                 text = item.title,
-                style = MaterialTheme.typography.titleSmall
+                style = MaterialTheme.typography.titleMedium
             )
-            Text(
-                text = item.statusText,
-                color = permissionStateColor(item.state),
-                style = MaterialTheme.typography.bodyMedium
-            )
+            Surface(
+                shape = MaterialTheme.shapes.small,
+                color = permissionStateContainerColor(item.state)
+            ) {
+                Text(
+                    text = item.statusText,
+                    color = permissionStateColor(item.state),
+                    style = MaterialTheme.typography.labelLarge,
+                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp)
+                )
+            }
             Text(
                 text = item.detailText,
-                style = MaterialTheme.typography.bodySmall
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
             )
-            Button(
+            FilledTonalButton(
                 onClick = { onOpenPermissionSettings(item.action) },
                 modifier = Modifier.fillMaxWidth()
             ) {
@@ -1067,12 +1236,22 @@ private fun PermissionHealthCard(
 }
 
 @Composable
+private fun permissionStateContainerColor(state: PermissionState): Color {
+    return when (state) {
+        PermissionState.OK -> MaterialTheme.colorScheme.secondaryContainer
+        PermissionState.NEEDS_ACTION -> MaterialTheme.colorScheme.errorContainer
+        PermissionState.MANUAL_CHECK -> MaterialTheme.colorScheme.tertiaryContainer
+        PermissionState.UNAVAILABLE -> MaterialTheme.colorScheme.surfaceContainerHighest
+    }
+}
+
+@Composable
 private fun permissionStateColor(state: PermissionState): Color {
     return when (state) {
-        PermissionState.OK -> MaterialTheme.colorScheme.primary
-        PermissionState.NEEDS_ACTION -> MaterialTheme.colorScheme.error
-        PermissionState.MANUAL_CHECK -> MaterialTheme.colorScheme.tertiary
-        PermissionState.UNAVAILABLE -> MaterialTheme.colorScheme.outline
+        PermissionState.OK -> MaterialTheme.colorScheme.onSecondaryContainer
+        PermissionState.NEEDS_ACTION -> MaterialTheme.colorScheme.onErrorContainer
+        PermissionState.MANUAL_CHECK -> MaterialTheme.colorScheme.onTertiaryContainer
+        PermissionState.UNAVAILABLE -> MaterialTheme.colorScheme.onSurfaceVariant
     }
 }
 

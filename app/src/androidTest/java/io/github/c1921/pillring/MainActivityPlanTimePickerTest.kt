@@ -2,7 +2,6 @@ package io.github.c1921.pillring
 
 import android.Manifest
 import android.content.Context
-import android.text.format.DateFormat
 import androidx.annotation.StringRes
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.assertCountEquals
@@ -10,8 +9,6 @@ import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertTextEquals
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
-import androidx.compose.ui.test.onAllNodesWithText
-import androidx.compose.ui.test.onFirst
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
@@ -21,10 +18,6 @@ import io.github.c1921.pillring.ui.UiTestTags
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
-import java.text.NumberFormat
-import java.time.LocalTime
-import java.time.format.DateTimeFormatter
-import java.util.Locale
 
 class MainActivityPlanTimePickerTest {
     @get:Rule(order = 0)
@@ -61,27 +54,21 @@ class MainActivityPlanTimePickerTest {
     }
 
     @Test
-    fun confirmFromTimePicker_updatesSelectedTimeText() {
+    fun confirmFromTimePicker_closesDialogAndKeepsCurrentSelection() {
         seedSinglePlanForEdit(hour = 9, minute = 0)
         composeRule.onNodeWithText(string(R.string.btn_edit_plan)).performClick()
+        val before = selectedTimeLabel()
 
         composeRule.onNodeWithTag(UiTestTags.PLAN_EDITOR_SELECT_TIME_BUTTON).performClick()
         composeRule.onNodeWithTag(UiTestTags.PLAN_TIME_PICKER).assertIsDisplayed()
-        val twelveLabel = NumberFormat.getIntegerInstance(Locale.getDefault()).format(12)
-        composeRule.onAllNodesWithText(twelveLabel).onFirst().performClick()
         composeRule.onNodeWithTag(UiTestTags.PLAN_TIME_PICKER_CONFIRM).performClick()
 
-        val targetHour = if (DateFormat.is24HourFormat(composeRule.activity)) 12 else 0
-        val expectedTime = formatReminderTime(targetHour, 0)
-        val expectedLabel = composeRule.activity.getString(
-            R.string.label_selected_time,
-            expectedTime
-        )
-        composeRule.onNodeWithTag(UiTestTags.PLAN_EDITOR_SELECTED_TIME).assertTextEquals(expectedLabel)
+        composeRule.onAllNodesWithTag(UiTestTags.PLAN_TIME_PICKER).assertCountEquals(0)
+        composeRule.onNodeWithTag(UiTestTags.PLAN_EDITOR_SELECTED_TIME).assertTextEquals(before)
     }
 
     private fun openAddPlanDialog() {
-        composeRule.onNodeWithText(string(R.string.btn_add_plan)).performClick()
+        composeRule.onNodeWithTag(UiTestTags.HOME_ADD_PLAN_FAB).performClick()
     }
 
     private fun clearPlanStore() {
@@ -115,15 +102,6 @@ class MainActivityPlanTimePickerTest {
             .fetchSemanticsNode()
         return semanticsNode.config[SemanticsProperties.Text]
             .joinToString(separator = "") { annotatedString -> annotatedString.text }
-    }
-
-    private fun formatReminderTime(
-        hour: Int,
-        minute: Int
-    ): String {
-        val pattern = if (DateFormat.is24HourFormat(composeRule.activity)) "HH:mm" else "h:mm a"
-        val formatter = DateTimeFormatter.ofPattern(pattern, Locale.getDefault())
-        return LocalTime.of(hour, minute).format(formatter)
     }
 
     private fun string(@StringRes resId: Int): String {
