@@ -11,6 +11,7 @@
     <string name="msg_exact_alarm_failed">Failed to schedule exact alarm.</string>
     <string name="msg_scheduled_ongoing">Ongoing reminder scheduled for 10 seconds later.</string>
     <string name="msg_reminder_stopped">Reminder stopped for this round.</string>
+    <string name="msg_open_settings_failed">Unable to open settings for this item.</string>
 
     <string name="notification_channel_name">Pill reminders</string>
     <string name="notification_channel_description">High priority reminder notifications for medicine schedule.</string>
@@ -18,6 +19,24 @@
     <string name="notification_text_ongoing">Time to take your medicine.</string>
     <string name="status_reminder_active">Reminder is active. Confirm to stop this round.</string>
     <string name="status_reminder_idle">Reminder is idle. You can trigger a test reminder.</string>
+
+    <string name="permission_health_title">Permission Health</string>
+    <string name="permission_health_description">Check reminder-related permissions and open system settings when needed.</string>
+    <string name="permission_item_notification_title">Notification permission</string>
+    <string name="permission_item_notification_detail">Required to display heads-up reminders.</string>
+    <string name="permission_item_exact_alarm_title">Exact alarm access</string>
+    <string name="permission_item_exact_alarm_detail">Required for precise reminder trigger timing.</string>
+    <string name="permission_item_battery_optimization_title">Battery optimization exemption</string>
+    <string name="permission_item_battery_optimization_detail">Disable optimization for stable background reminder delivery.</string>
+    <string name="permission_item_background_restriction_title">Background restriction</string>
+    <string name="permission_item_background_restriction_detail">Background restrictions can block reminder reliability.</string>
+    <string name="permission_item_autostart_title">Autostart (Xiaomi/HyperOS)</string>
+    <string name="permission_item_autostart_detail">System API cannot read this toggle. Please verify manually on Xiaomi settings.</string>
+    <string name="permission_status_ok">Ready</string>
+    <string name="permission_status_needs_action">Needs action</string>
+    <string name="permission_status_manual_check">Manual check required</string>
+    <string name="permission_status_unavailable">Unavailable on this device</string>
+    <string name="permission_action_open_settings">Open settings</string>
 
     <string name="reason_manual_ongoing">Scheduled from ongoing test button.</string>
     <string name="reason_delete_fallback">Notification dismissed; fallback reminder in 30 seconds. Previous reason: %1$s</string>
