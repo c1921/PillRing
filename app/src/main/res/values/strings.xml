@@ -19,6 +19,10 @@
     <string name="notification_text_ongoing">Time to take your medicine.</string>
     <string name="status_reminder_active">Reminder is active. Confirm to stop this round.</string>
     <string name="status_reminder_idle">Reminder is idle. You can trigger a test reminder.</string>
+    <string name="settings_page_title">Settings</string>
+    <string name="settings_page_description">Manage reminder-related permissions.</string>
+    <string name="btn_open_settings_page">Settings</string>
+    <string name="btn_back_to_test_page">Back</string>
 
     <string name="permission_health_title">Permission Health</string>
     <string name="permission_health_description">Check reminder-related permissions and open system settings when needed.</string>

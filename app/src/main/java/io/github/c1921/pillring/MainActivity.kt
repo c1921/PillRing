@@ -5,6 +5,7 @@ import android.content.pm.PackageManager
 import android.os.Bundle
 import android.widget.Toast
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
@@ -47,6 +48,11 @@ import io.github.c1921.pillring.permission.PermissionSettingsNavigator
 import io.github.c1921.pillring.permission.PermissionState
 import io.github.c1921.pillring.ui.theme.PillRingTheme
 
+private enum class AppScreen {
+    HOME,
+    SETTINGS
+}
+
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -60,6 +66,9 @@ class MainActivity : ComponentActivity() {
             }
             var permissionItems by remember {
                 mutableStateOf(buildPermissionItems())
+            }
+            var currentScreen by rememberSaveable {
+                mutableStateOf(AppScreen.HOME)
             }
             val lifecycleOwner = LocalLifecycleOwner.current
 
@@ -77,22 +86,40 @@ class MainActivity : ComponentActivity() {
             }
 
             PillRingTheme {
-                ReminderTestScreen(
-                    isReminderActive = isReminderActive,
-                    permissionItems = permissionItems,
-                    onScheduleClick = {
-                        if (scheduleReminder()) {
-                            isReminderActive = true
-                            permissionItems = buildPermissionItems()
-                        }
-                    },
-                    onConfirmStopClick = {
-                        confirmStopReminder()
-                        isReminderActive = false
-                        permissionItems = buildPermissionItems()
-                    },
-                    onOpenPermissionSettings = ::openPermissionSettings
-                )
+                BackHandler(enabled = currentScreen == AppScreen.SETTINGS) {
+                    currentScreen = AppScreen.HOME
+                }
+
+                when (currentScreen) {
+                    AppScreen.HOME -> {
+                        ReminderTestScreen(
+                            isReminderActive = isReminderActive,
+                            onScheduleClick = {
+                                if (scheduleReminder()) {
+                                    isReminderActive = true
+                                    permissionItems = buildPermissionItems()
+                                }
+                            },
+                            onConfirmStopClick = {
+                                confirmStopReminder()
+                                isReminderActive = false
+                                permissionItems = buildPermissionItems()
+                            },
+                            onOpenSettingsClick = {
+                                permissionItems = buildPermissionItems()
+                                currentScreen = AppScreen.SETTINGS
+                            }
+                        )
+                    }
+
+                    AppScreen.SETTINGS -> {
+                        SettingsScreen(
+                            permissionItems = permissionItems,
+                            onBackClick = { currentScreen = AppScreen.HOME },
+                            onOpenPermissionSettings = ::openPermissionSettings
+                        )
+                    }
+                }
             }
         }
     }
@@ -190,10 +217,9 @@ class MainActivity : ComponentActivity() {
 @Composable
 private fun ReminderTestScreen(
     isReminderActive: Boolean,
-    permissionItems: List<PermissionHealthItem>,
     onScheduleClick: () -> Unit,
     onConfirmStopClick: () -> Unit,
-    onOpenPermissionSettings: (PermissionAction) -> Unit
+    onOpenSettingsClick: () -> Unit
 ) {
     Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
         Column(
@@ -234,7 +260,42 @@ private fun ReminderTestScreen(
                     Text(text = stringResource(R.string.btn_schedule_ongoing))
                 }
             }
+            Button(
+                onClick = onOpenSettingsClick,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text(text = stringResource(R.string.btn_open_settings_page))
+            }
+        }
+    }
+}
 
+@Composable
+private fun SettingsScreen(
+    permissionItems: List<PermissionHealthItem>,
+    onBackClick: () -> Unit,
+    onOpenPermissionSettings: (PermissionAction) -> Unit
+) {
+    Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(innerPadding)
+                .padding(24.dp)
+                .verticalScroll(rememberScrollState()),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            Text(
+                text = stringResource(R.string.settings_page_title),
+                style = MaterialTheme.typography.headlineSmall
+            )
+            Text(text = stringResource(R.string.settings_page_description))
+            Button(
+                onClick = onBackClick,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text(text = stringResource(R.string.btn_back_to_test_page))
+            }
             PermissionHealthPanel(
                 items = permissionItems,
                 onOpenPermissionSettings = onOpenPermissionSettings
@@ -316,6 +377,18 @@ private fun ReminderTestScreenPreview() {
     PillRingTheme {
         ReminderTestScreen(
             isReminderActive = false,
+            onScheduleClick = {},
+            onConfirmStopClick = {},
+            onOpenSettingsClick = {}
+        )
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+private fun SettingsScreenPreview() {
+    PillRingTheme {
+        SettingsScreen(
             permissionItems = listOf(
                 PermissionHealthItem(
                     id = "notification",
@@ -327,8 +400,7 @@ private fun ReminderTestScreenPreview() {
                     action = PermissionAction.OPEN_NOTIFICATION_SETTINGS
                 )
             ),
-            onScheduleClick = {},
-            onConfirmStopClick = {},
+            onBackClick = {},
             onOpenPermissionSettings = {}
         )
     }
