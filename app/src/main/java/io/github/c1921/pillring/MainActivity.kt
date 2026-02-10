@@ -1,8 +1,11 @@
 package io.github.c1921.pillring
 
 import android.Manifest
+import android.app.TimePickerDialog
+import android.content.Context
 import android.content.pm.PackageManager
 import android.os.Bundle
+import android.text.format.DateFormat
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
@@ -30,6 +33,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
@@ -37,16 +41,21 @@ import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
-import io.github.c1921.pillring.notification.ReminderContract
 import io.github.c1921.pillring.notification.ReminderNotifier
 import io.github.c1921.pillring.notification.ReminderScheduler
 import io.github.c1921.pillring.notification.ReminderSessionStore
+import io.github.c1921.pillring.notification.ReminderTimeCalculator
 import io.github.c1921.pillring.permission.PermissionAction
 import io.github.c1921.pillring.permission.PermissionHealthChecker
 import io.github.c1921.pillring.permission.PermissionHealthItem
 import io.github.c1921.pillring.permission.PermissionSettingsNavigator
 import io.github.c1921.pillring.permission.PermissionState
 import io.github.c1921.pillring.ui.theme.PillRingTheme
+import java.time.LocalDateTime
+import java.time.LocalTime
+import java.time.ZoneId
+import java.time.format.DateTimeFormatter
+import java.util.Locale
 
 private enum class AppScreen {
     HOME,
@@ -61,8 +70,18 @@ class MainActivity : ComponentActivity() {
         }
         enableEdgeToEdge()
         setContent {
+            val initialSelectedTime = remember { loadOrInitializeSelectedTime() }
+            var selectedHour by rememberSaveable {
+                mutableStateOf(initialSelectedTime.first)
+            }
+            var selectedMinute by rememberSaveable {
+                mutableStateOf(initialSelectedTime.second)
+            }
             var isReminderActive by rememberSaveable {
                 mutableStateOf(ReminderSessionStore.isReminderActive(this@MainActivity))
+            }
+            var isPlanEnabled by rememberSaveable {
+                mutableStateOf(ReminderSessionStore.isPlanEnabled(this@MainActivity))
             }
             var permissionItems by remember {
                 mutableStateOf(buildPermissionItems())
@@ -76,6 +95,10 @@ class MainActivity : ComponentActivity() {
                 val observer = LifecycleEventObserver { _, event ->
                     if (event == Lifecycle.Event.ON_RESUME) {
                         isReminderActive = ReminderSessionStore.isReminderActive(this@MainActivity)
+                        isPlanEnabled = ReminderSessionStore.isPlanEnabled(this@MainActivity)
+                        val selectedTime = loadOrInitializeSelectedTime()
+                        selectedHour = selectedTime.first
+                        selectedMinute = selectedTime.second
                         permissionItems = buildPermissionItems()
                     }
                 }
@@ -94,11 +117,51 @@ class MainActivity : ComponentActivity() {
                     AppScreen.HOME -> {
                         ReminderTestScreen(
                             isReminderActive = isReminderActive,
-                            onScheduleClick = {
-                                if (scheduleReminder()) {
-                                    isReminderActive = true
-                                    permissionItems = buildPermissionItems()
+                            isPlanEnabled = isPlanEnabled,
+                            selectedHour = selectedHour,
+                            selectedMinute = selectedMinute,
+                            onTimeSelected = { hour, minute ->
+                                ReminderSessionStore.setSelectedTime(this@MainActivity, hour, minute)
+                                selectedHour = hour
+                                selectedMinute = minute
+
+                                if (isPlanEnabled) {
+                                    if (rescheduleDailyPlan()) {
+                                        Toast.makeText(
+                                            this@MainActivity,
+                                            getString(R.string.msg_time_updated_rescheduled),
+                                            Toast.LENGTH_SHORT
+                                        ).show()
+                                    } else {
+                                        Toast.makeText(
+                                            this@MainActivity,
+                                            getString(R.string.msg_time_updated_reschedule_failed),
+                                            Toast.LENGTH_SHORT
+                                        ).show()
+                                    }
+                                } else {
+                                    Toast.makeText(
+                                        this@MainActivity,
+                                        getString(R.string.msg_time_saved),
+                                        Toast.LENGTH_SHORT
+                                    ).show()
                                 }
+
+                                isReminderActive = ReminderSessionStore.isReminderActive(this@MainActivity)
+                                isPlanEnabled = ReminderSessionStore.isPlanEnabled(this@MainActivity)
+                                permissionItems = buildPermissionItems()
+                            },
+                            onEnablePlanClick = {
+                                enableDailyPlan()
+                                isReminderActive = ReminderSessionStore.isReminderActive(this@MainActivity)
+                                isPlanEnabled = ReminderSessionStore.isPlanEnabled(this@MainActivity)
+                                permissionItems = buildPermissionItems()
+                            },
+                            onDisablePlanClick = {
+                                disableDailyPlan()
+                                isReminderActive = ReminderSessionStore.isReminderActive(this@MainActivity)
+                                isPlanEnabled = ReminderSessionStore.isPlanEnabled(this@MainActivity)
+                                permissionItems = buildPermissionItems()
                             },
                             onConfirmStopClick = {
                                 confirmStopReminder()
@@ -131,7 +194,17 @@ class MainActivity : ComponentActivity() {
         ) == PackageManager.PERMISSION_GRANTED
     }
 
-    private fun scheduleReminder(): Boolean {
+    private fun loadOrInitializeSelectedTime(): Pair<Int, Int> {
+        ReminderSessionStore.getSelectedTime(this)?.let { return it }
+
+        val defaultTime = LocalDateTime.now().plusMinutes(1)
+        val selectedHour = defaultTime.hour
+        val selectedMinute = defaultTime.minute
+        ReminderSessionStore.setSelectedTime(this, selectedHour, selectedMinute)
+        return selectedHour to selectedMinute
+    }
+
+    private fun ensureReminderSchedulingAllowed(): Boolean {
         if (!hasNotificationPermission()) {
             Toast.makeText(
                 this,
@@ -151,34 +224,94 @@ class MainActivity : ComponentActivity() {
             return false
         }
 
-        val scheduled = ReminderScheduler.scheduleExact(
-            context = this,
-            delayMs = ReminderContract.INITIAL_TRIGGER_DELAY_MS,
-            reason = getString(R.string.reason_manual_ongoing)
+        return true
+    }
+
+    private fun enableDailyPlan() {
+        if (!ensureReminderSchedulingAllowed()) {
+            ReminderSessionStore.setPlanEnabled(this, false)
+            return
+        }
+
+        ReminderSessionStore.setPlanEnabled(this, true)
+        val scheduled = scheduleNextDailyReminder(
+            reason = getString(R.string.reason_plan_enabled)
         )
 
         if (scheduled) {
-            ReminderSessionStore.markReminderTriggered(this)
             Toast.makeText(
                 this,
-                getString(R.string.msg_scheduled_ongoing),
+                getString(R.string.msg_plan_enabled),
                 Toast.LENGTH_SHORT
             ).show()
-            return true
+            return
         }
 
+        ReminderSessionStore.setPlanEnabled(this, false)
         Toast.makeText(
             this,
             getString(R.string.msg_exact_alarm_failed),
             Toast.LENGTH_SHORT
         ).show()
         openPermissionSettings(PermissionAction.OPEN_EXACT_ALARM_SETTINGS)
-        return false
+    }
+
+    private fun disableDailyPlan() {
+        ReminderSessionStore.setPlanEnabled(this, false)
+        ReminderSessionStore.markReminderConfirmed(this)
+        ReminderScheduler.cancelAllScheduledReminders(this)
+        ReminderNotifier.cancelReminderNotification(this)
+        Toast.makeText(
+            this,
+            getString(R.string.msg_plan_disabled),
+            Toast.LENGTH_SHORT
+        ).show()
+    }
+
+    private fun rescheduleDailyPlan(): Boolean {
+        if (!ReminderSessionStore.isPlanEnabled(this)) {
+            return false
+        }
+
+        if (!ensureReminderSchedulingAllowed()) {
+            return false
+        }
+
+        val scheduled = scheduleNextDailyReminder(
+            reason = getString(R.string.reason_time_updated)
+        )
+
+        if (!scheduled) {
+            Toast.makeText(
+                this,
+                getString(R.string.msg_exact_alarm_failed),
+                Toast.LENGTH_SHORT
+            ).show()
+            openPermissionSettings(PermissionAction.OPEN_EXACT_ALARM_SETTINGS)
+        }
+
+        return scheduled
+    }
+
+    private fun scheduleNextDailyReminder(reason: String): Boolean {
+        val selectedTime = loadOrInitializeSelectedTime()
+        val triggerAtMs = ReminderTimeCalculator.computeNextDailyTriggerAtMs(
+            nowMs = System.currentTimeMillis(),
+            zoneId = ZoneId.systemDefault(),
+            hour = selectedTime.first,
+            minute = selectedTime.second
+        )
+
+        return ReminderScheduler.scheduleDailyAt(
+            context = this,
+            triggerAtMs = triggerAtMs,
+            reason = reason
+        )
     }
 
     private fun confirmStopReminder() {
         ReminderSessionStore.markReminderConfirmed(this)
-        ReminderScheduler.cancelScheduledReminder(this)
+        ReminderScheduler.cancelFallbackReminder(this)
         ReminderNotifier.cancelReminderNotification(this)
         Toast.makeText(
             this,
@@ -217,7 +350,12 @@ class MainActivity : ComponentActivity() {
 @Composable
 private fun ReminderTestScreen(
     isReminderActive: Boolean,
-    onScheduleClick: () -> Unit,
+    isPlanEnabled: Boolean,
+    selectedHour: Int,
+    selectedMinute: Int,
+    onTimeSelected: (Int, Int) -> Unit,
+    onEnablePlanClick: () -> Unit,
+    onDisablePlanClick: () -> Unit,
     onConfirmStopClick: () -> Unit,
     onOpenSettingsClick: () -> Unit
 ) {
@@ -230,11 +368,26 @@ private fun ReminderTestScreen(
                 .verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
+            val context = LocalContext.current
+            val selectedTimeText = remember(selectedHour, selectedMinute, context) {
+                formatReminderTime(context, selectedHour, selectedMinute)
+            }
+
             Text(
                 text = stringResource(R.string.test_page_title),
                 style = MaterialTheme.typography.headlineSmall
             )
             Text(text = stringResource(R.string.test_page_description))
+            Text(text = stringResource(R.string.label_selected_time, selectedTimeText))
+            Text(
+                text = stringResource(
+                    if (isPlanEnabled) {
+                        R.string.status_plan_enabled
+                    } else {
+                        R.string.status_plan_disabled
+                    }
+                )
+            )
             Text(
                 text = stringResource(
                     if (isReminderActive) {
@@ -245,6 +398,39 @@ private fun ReminderTestScreen(
                 )
             )
 
+            Button(
+                onClick = {
+                    TimePickerDialog(
+                        context,
+                        { _, hourOfDay, minute ->
+                            onTimeSelected(hourOfDay, minute)
+                        },
+                        selectedHour,
+                        selectedMinute,
+                        DateFormat.is24HourFormat(context)
+                    ).show()
+                },
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text(text = stringResource(R.string.btn_select_time))
+            }
+
+            if (isPlanEnabled) {
+                Button(
+                    onClick = onDisablePlanClick,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text(text = stringResource(R.string.btn_disable_plan))
+                }
+            } else {
+                Button(
+                    onClick = onEnablePlanClick,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text(text = stringResource(R.string.btn_enable_plan))
+                }
+            }
+
             if (isReminderActive) {
                 Button(
                     onClick = onConfirmStopClick,
@@ -252,14 +438,8 @@ private fun ReminderTestScreen(
                 ) {
                     Text(text = stringResource(R.string.btn_confirm_stop_reminder))
                 }
-            } else {
-                Button(
-                    onClick = onScheduleClick,
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Text(text = stringResource(R.string.btn_schedule_ongoing))
-                }
             }
+
             Button(
                 onClick = onOpenSettingsClick,
                 modifier = Modifier.fillMaxWidth()
@@ -268,6 +448,16 @@ private fun ReminderTestScreen(
             }
         }
     }
+}
+
+private fun formatReminderTime(
+    context: Context,
+    hour: Int,
+    minute: Int
+): String {
+    val pattern = if (DateFormat.is24HourFormat(context)) "HH:mm" else "h:mm a"
+    val formatter = DateTimeFormatter.ofPattern(pattern, Locale.getDefault())
+    return LocalTime.of(hour, minute).format(formatter)
 }
 
 @Composable
@@ -377,7 +567,12 @@ private fun ReminderTestScreenPreview() {
     PillRingTheme {
         ReminderTestScreen(
             isReminderActive = false,
-            onScheduleClick = {},
+            isPlanEnabled = false,
+            selectedHour = 9,
+            selectedMinute = 0,
+            onTimeSelected = { _, _ -> },
+            onEnablePlanClick = {},
+            onDisablePlanClick = {},
             onConfirmStopClick = {},
             onOpenSettingsClick = {}
         )

@@ -16,14 +16,14 @@ object ReminderScheduler {
         }
     }
 
-    fun scheduleExact(
+    fun scheduleExactAt(
         context: Context,
-        delayMs: Long,
-        reason: String
+        triggerAtMs: Long,
+        reason: String,
+        alarmKind: String
     ): Boolean {
         val alarmManager = context.getSystemService(AlarmManager::class.java)
-        val triggerAtMs = System.currentTimeMillis() + delayMs
-        val alarmIntent = buildAlarmPendingIntent(context, reason)
+        val alarmIntent = buildAlarmPendingIntent(context, reason, alarmKind) ?: return false
 
         return try {
             alarmManager.setExactAndAllowWhileIdle(
@@ -37,17 +37,56 @@ object ReminderScheduler {
         }
     }
 
-    fun cancelScheduledReminder(context: Context) {
-        val alarmManager = context.getSystemService(AlarmManager::class.java)
-        val intent = Intent(context, ReminderAlarmReceiver::class.java).apply {
-            action = ReminderContract.ACTION_SHOW_REMINDER
-        }
-        val pendingIntent = PendingIntent.getBroadcast(
-            context,
-            ReminderContract.REQUEST_CODE_ALARM_REMINDER,
-            intent,
-            PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_NO_CREATE
+    fun scheduleDailyAt(
+        context: Context,
+        triggerAtMs: Long,
+        reason: String
+    ): Boolean {
+        return scheduleExactAt(
+            context = context,
+            triggerAtMs = triggerAtMs,
+            reason = reason,
+            alarmKind = ReminderContract.ALARM_KIND_DAILY
         )
+    }
+
+    fun scheduleFallbackAfter(
+        context: Context,
+        delayMs: Long,
+        reason: String
+    ): Boolean {
+        return scheduleExactAt(
+            context = context,
+            triggerAtMs = System.currentTimeMillis() + delayMs,
+            reason = reason,
+            alarmKind = ReminderContract.ALARM_KIND_FALLBACK
+        )
+    }
+
+    fun cancelDailyReminder(context: Context) {
+        cancelReminderByKind(context, ReminderContract.ALARM_KIND_DAILY)
+    }
+
+    fun cancelFallbackReminder(context: Context) {
+        cancelReminderByKind(context, ReminderContract.ALARM_KIND_FALLBACK)
+    }
+
+    fun cancelAllScheduledReminders(context: Context) {
+        cancelDailyReminder(context)
+        cancelFallbackReminder(context)
+    }
+
+    private fun cancelReminderByKind(
+        context: Context,
+        alarmKind: String
+    ) {
+        val alarmManager = context.getSystemService(AlarmManager::class.java)
+        val pendingIntent = buildAlarmPendingIntent(
+            context = context,
+            reason = "",
+            alarmKind = alarmKind,
+            extraFlags = PendingIntent.FLAG_NO_CREATE
+        ) ?: return
         pendingIntent?.let {
             alarmManager.cancel(it)
             it.cancel()
@@ -56,18 +95,27 @@ object ReminderScheduler {
 
     private fun buildAlarmPendingIntent(
         context: Context,
-        reason: String
-    ): PendingIntent {
+        reason: String,
+        alarmKind: String,
+        extraFlags: Int = 0
+    ): PendingIntent? {
+        val requestCode = when (alarmKind) {
+            ReminderContract.ALARM_KIND_DAILY -> ReminderContract.REQUEST_CODE_ALARM_DAILY
+            ReminderContract.ALARM_KIND_FALLBACK -> ReminderContract.REQUEST_CODE_ALARM_FALLBACK
+            else -> return null
+        }
+
         val intent = Intent(context, ReminderAlarmReceiver::class.java).apply {
             action = ReminderContract.ACTION_SHOW_REMINDER
             putExtra(ReminderContract.EXTRA_REASON, reason)
+            putExtra(ReminderContract.EXTRA_ALARM_KIND, alarmKind)
         }
 
         return PendingIntent.getBroadcast(
             context,
-            ReminderContract.REQUEST_CODE_ALARM_REMINDER,
+            requestCode,
             intent,
-            PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
+            PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT or extraFlags
         )
     }
 }

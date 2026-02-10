@@ -31,7 +31,7 @@ class NotificationDeleteReceiver : BroadcastReceiver() {
             previousReason
         )
 
-        ReminderScheduler.scheduleExact(
+        ReminderScheduler.scheduleFallbackAfter(
             context = context,
             delayMs = ReminderContract.DELETE_RESCHEDULE_DELAY_MS,
             reason = fallbackReason
