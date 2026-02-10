@@ -1,12 +1,30 @@
 <resources>
     <string name="app_name">PillRing</string>
     <string name="test_page_title">Daily Reminder</string>
-    <string name="test_page_description">Set a daily reminder time and enable or disable the plan.</string>
+    <string name="test_page_description">Manage multiple daily plans with independent reminders.</string>
+
     <string name="label_selected_time">Selected time: %1$s</string>
+    <string name="label_plan_count">Plans: %1$d/%2$d</string>
+    <string name="label_plan_name">Plan name</string>
+    <string name="label_name_length">%1$d/%2$d</string>
+
     <string name="btn_select_time">Select time</string>
+    <string name="btn_add_plan">Add plan</string>
+    <string name="btn_edit_plan">Edit</string>
+    <string name="btn_delete_plan">Delete</string>
+    <string name="btn_move_up">Move up</string>
+    <string name="btn_move_down">Move down</string>
     <string name="btn_enable_plan">Enable daily plan</string>
     <string name="btn_disable_plan">Disable daily plan</string>
     <string name="btn_confirm_stop_reminder">Confirm and stop this round</string>
+    <string name="btn_confirm_stop_plan_reminder">Confirm and stop this plan reminder</string>
+    <string name="btn_open_settings_page">Settings</string>
+    <string name="btn_back_to_test_page">Back</string>
+
+    <string name="dialog_add_plan_title">Add plan</string>
+    <string name="dialog_edit_plan_title">Edit plan</string>
+    <string name="dialog_btn_save">Save</string>
+    <string name="dialog_btn_cancel">Cancel</string>
 
     <string name="msg_notification_permission_required">Notification permission is required.</string>
     <string name="msg_notification_permission_denied">Notification permission denied.</string>
@@ -19,19 +37,33 @@
     <string name="msg_time_updated_reschedule_failed">Time saved, but failed to reschedule next trigger.</string>
     <string name="msg_reminder_stopped">Reminder stopped for this round.</string>
     <string name="msg_open_settings_failed">Unable to open settings for this item.</string>
+    <string name="msg_plan_limit_reached">You can add up to 10 plans.</string>
+    <string name="msg_plan_name_required">Plan name is required.</string>
+    <string name="msg_plan_save_failed">Failed to save this plan.</string>
+    <string name="msg_plan_added_enabled">%1$s added and enabled.</string>
+    <string name="msg_plan_updated">Plan updated.</string>
+    <string name="msg_plan_enabled_name">%1$s enabled.</string>
+    <string name="msg_plan_disabled_name">%1$s disabled.</string>
+    <string name="msg_plan_deleted">%1$s deleted.</string>
+    <string name="msg_reminder_stopped_plan">Stopped current reminder for %1$s.</string>
 
     <string name="notification_channel_name">Pill reminders</string>
     <string name="notification_channel_description">High priority reminder notifications for medicine schedule.</string>
     <string name="notification_title_ongoing">Pill reminder</string>
     <string name="notification_text_ongoing">Time to take your medicine.</string>
-    <string name="status_plan_enabled">Daily plan is enabled.</string>
-    <string name="status_plan_disabled">Daily plan is disabled.</string>
+    <string name="notification_title_with_plan">%1$s reminder</string>
+    <string name="notification_text_with_plan_time">%1$s at %2$s. Time to take your medicine.</string>
+
+    <string name="status_plan_enabled">Plan is enabled.</string>
+    <string name="status_plan_disabled">Plan is disabled.</string>
     <string name="status_reminder_active">Reminder is active. Confirm to stop this round.</string>
+    <string name="status_reminder_active_multi">At least one plan reminder is active.</string>
     <string name="status_reminder_idle">No active reminder right now.</string>
+    <string name="empty_plan_list">No plans yet. Add one to get started.</string>
+    <string name="default_plan_name">Plan %1$d</string>
+
     <string name="settings_page_title">Settings</string>
     <string name="settings_page_description">Manage reminder-related permissions.</string>
-    <string name="btn_open_settings_page">Settings</string>
-    <string name="btn_back_to_test_page">Back</string>
 
     <string name="permission_health_title">Permission Health</string>
     <string name="permission_health_description">Check reminder-related permissions and open system settings when needed.</string>

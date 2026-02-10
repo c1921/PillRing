@@ -14,16 +14,21 @@ import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
@@ -42,6 +47,7 @@ import androidx.core.content.ContextCompat
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import io.github.c1921.pillring.notification.ReminderNotifier
+import io.github.c1921.pillring.notification.ReminderPlan
 import io.github.c1921.pillring.notification.ReminderScheduler
 import io.github.c1921.pillring.notification.ReminderSessionStore
 import io.github.c1921.pillring.notification.ReminderTimeCalculator
@@ -57,10 +63,19 @@ import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.util.Locale
 
+private const val MAX_PLAN_NAME_LENGTH = 30
+
 private enum class AppScreen {
     HOME,
     SETTINGS
 }
+
+private data class PlanEditorState(
+    val planId: String?,
+    val initialName: String,
+    val initialHour: Int,
+    val initialMinute: Int
+)
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -68,20 +83,17 @@ class MainActivity : ComponentActivity() {
         if (!hasNotificationPermission()) {
             requestPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
         }
+
+        // Clean up possible single-plan legacy artifacts after store migration.
+        ReminderSessionStore.getPlans(this)
+        ReminderScheduler.cancelLegacySinglePlanReminders(this)
+        ReminderNotifier.cancelLegacyReminderNotification(this)
+        rescheduleEnabledPlansSilently()
+
         enableEdgeToEdge()
         setContent {
-            val initialSelectedTime = remember { loadOrInitializeSelectedTime() }
-            var selectedHour by rememberSaveable {
-                mutableStateOf(initialSelectedTime.first)
-            }
-            var selectedMinute by rememberSaveable {
-                mutableStateOf(initialSelectedTime.second)
-            }
-            var isReminderActive by rememberSaveable {
-                mutableStateOf(ReminderSessionStore.isReminderActive(this@MainActivity))
-            }
-            var isPlanEnabled by rememberSaveable {
-                mutableStateOf(ReminderSessionStore.isPlanEnabled(this@MainActivity))
+            var plans by remember {
+                mutableStateOf(loadPlans())
             }
             var permissionItems by remember {
                 mutableStateOf(buildPermissionItems())
@@ -89,16 +101,15 @@ class MainActivity : ComponentActivity() {
             var currentScreen by rememberSaveable {
                 mutableStateOf(AppScreen.HOME)
             }
+            var planEditorState by remember {
+                mutableStateOf<PlanEditorState?>(null)
+            }
             val lifecycleOwner = LocalLifecycleOwner.current
 
             DisposableEffect(lifecycleOwner) {
                 val observer = LifecycleEventObserver { _, event ->
                     if (event == Lifecycle.Event.ON_RESUME) {
-                        isReminderActive = ReminderSessionStore.isReminderActive(this@MainActivity)
-                        isPlanEnabled = ReminderSessionStore.isPlanEnabled(this@MainActivity)
-                        val selectedTime = loadOrInitializeSelectedTime()
-                        selectedHour = selectedTime.first
-                        selectedMinute = selectedTime.second
+                        plans = loadPlans()
                         permissionItems = buildPermissionItems()
                     }
                 }
@@ -115,57 +126,55 @@ class MainActivity : ComponentActivity() {
 
                 when (currentScreen) {
                     AppScreen.HOME -> {
-                        ReminderTestScreen(
-                            isReminderActive = isReminderActive,
-                            isPlanEnabled = isPlanEnabled,
-                            selectedHour = selectedHour,
-                            selectedMinute = selectedMinute,
-                            onTimeSelected = { hour, minute ->
-                                ReminderSessionStore.setSelectedTime(this@MainActivity, hour, minute)
-                                selectedHour = hour
-                                selectedMinute = minute
-
-                                if (isPlanEnabled) {
-                                    if (rescheduleDailyPlan()) {
-                                        Toast.makeText(
-                                            this@MainActivity,
-                                            getString(R.string.msg_time_updated_rescheduled),
-                                            Toast.LENGTH_SHORT
-                                        ).show()
-                                    } else {
-                                        Toast.makeText(
-                                            this@MainActivity,
-                                            getString(R.string.msg_time_updated_reschedule_failed),
-                                            Toast.LENGTH_SHORT
-                                        ).show()
-                                    }
-                                } else {
+                        ReminderHomeScreen(
+                            plans = plans,
+                            maxPlans = ReminderSessionStore.MAX_PLAN_COUNT,
+                            onAddPlanClick = {
+                                if (plans.size >= ReminderSessionStore.MAX_PLAN_COUNT) {
                                     Toast.makeText(
                                         this@MainActivity,
-                                        getString(R.string.msg_time_saved),
+                                        getString(R.string.msg_plan_limit_reached),
                                         Toast.LENGTH_SHORT
                                     ).show()
+                                } else {
+                                    planEditorState = buildDefaultPlanEditorState(plans.size + 1)
                                 }
-
-                                isReminderActive = ReminderSessionStore.isReminderActive(this@MainActivity)
-                                isPlanEnabled = ReminderSessionStore.isPlanEnabled(this@MainActivity)
+                            },
+                            onEditPlanClick = { plan ->
+                                planEditorState = PlanEditorState(
+                                    planId = plan.id,
+                                    initialName = plan.name,
+                                    initialHour = plan.hour,
+                                    initialMinute = plan.minute
+                                )
+                            },
+                            onDeletePlanClick = { plan ->
+                                deletePlan(plan.id)
+                                plans = loadPlans()
                                 permissionItems = buildPermissionItems()
                             },
-                            onEnablePlanClick = {
-                                enableDailyPlan()
-                                isReminderActive = ReminderSessionStore.isReminderActive(this@MainActivity)
-                                isPlanEnabled = ReminderSessionStore.isPlanEnabled(this@MainActivity)
+                            onMoveUpClick = { plan ->
+                                ReminderSessionStore.movePlanUp(
+                                    context = this@MainActivity,
+                                    planId = plan.id
+                                )
+                                plans = loadPlans()
+                            },
+                            onMoveDownClick = { plan ->
+                                ReminderSessionStore.movePlanDown(
+                                    context = this@MainActivity,
+                                    planId = plan.id
+                                )
+                                plans = loadPlans()
+                            },
+                            onPlanEnabledChange = { plan, enabled ->
+                                setPlanEnabled(planId = plan.id, enabled = enabled)
+                                plans = loadPlans()
                                 permissionItems = buildPermissionItems()
                             },
-                            onDisablePlanClick = {
-                                disableDailyPlan()
-                                isReminderActive = ReminderSessionStore.isReminderActive(this@MainActivity)
-                                isPlanEnabled = ReminderSessionStore.isPlanEnabled(this@MainActivity)
-                                permissionItems = buildPermissionItems()
-                            },
-                            onConfirmStopClick = {
-                                confirmStopReminder()
-                                isReminderActive = false
+                            onConfirmStopClick = { plan ->
+                                confirmStopReminder(plan.id)
+                                plans = loadPlans()
                                 permissionItems = buildPermissionItems()
                             },
                             onOpenSettingsClick = {
@@ -183,8 +192,57 @@ class MainActivity : ComponentActivity() {
                         )
                     }
                 }
+
+                planEditorState?.let { editor ->
+                    PlanEditorDialog(
+                        planId = editor.planId,
+                        initialName = editor.initialName,
+                        initialHour = editor.initialHour,
+                        initialMinute = editor.initialMinute,
+                        maxNameLength = MAX_PLAN_NAME_LENGTH,
+                        onDismiss = {
+                            planEditorState = null
+                        },
+                        onSave = { name, hour, minute ->
+                            val saved = if (editor.planId == null) {
+                                addPlan(
+                                    name = name,
+                                    hour = hour,
+                                    minute = minute
+                                )
+                            } else {
+                                editPlan(
+                                    planId = editor.planId,
+                                    name = name,
+                                    hour = hour,
+                                    minute = minute
+                                )
+                            }
+
+                            plans = loadPlans()
+                            permissionItems = buildPermissionItems()
+                            if (saved) {
+                                planEditorState = null
+                            }
+                        }
+                    )
+                }
             }
         }
+    }
+
+    private fun loadPlans(): List<ReminderPlan> {
+        return ReminderSessionStore.getPlans(this)
+    }
+
+    private fun buildDefaultPlanEditorState(nextIndex: Int): PlanEditorState {
+        val defaultTime = LocalDateTime.now().plusMinutes(1)
+        return PlanEditorState(
+            planId = null,
+            initialName = getString(R.string.default_plan_name, nextIndex),
+            initialHour = defaultTime.hour,
+            initialMinute = defaultTime.minute
+        )
     }
 
     private fun hasNotificationPermission(): Boolean {
@@ -192,16 +250,6 @@ class MainActivity : ComponentActivity() {
             this,
             Manifest.permission.POST_NOTIFICATIONS
         ) == PackageManager.PERMISSION_GRANTED
-    }
-
-    private fun loadOrInitializeSelectedTime(): Pair<Int, Int> {
-        ReminderSessionStore.getSelectedTime(this)?.let { return it }
-
-        val defaultTime = LocalDateTime.now().plusMinutes(1)
-        val selectedHour = defaultTime.hour
-        val selectedMinute = defaultTime.minute
-        ReminderSessionStore.setSelectedTime(this, selectedHour, selectedMinute)
-        return selectedHour to selectedMinute
     }
 
     private fun ensureReminderSchedulingAllowed(): Boolean {
@@ -227,97 +275,239 @@ class MainActivity : ComponentActivity() {
         return true
     }
 
-    private fun enableDailyPlan() {
+    private fun addPlan(
+        name: String,
+        hour: Int,
+        minute: Int
+    ): Boolean {
+        if (name.isBlank()) {
+            Toast.makeText(
+                this,
+                getString(R.string.msg_plan_name_required),
+                Toast.LENGTH_SHORT
+            ).show()
+            return false
+        }
+        if (loadPlans().size >= ReminderSessionStore.MAX_PLAN_COUNT) {
+            Toast.makeText(
+                this,
+                getString(R.string.msg_plan_limit_reached),
+                Toast.LENGTH_SHORT
+            ).show()
+            return false
+        }
         if (!ensureReminderSchedulingAllowed()) {
-            ReminderSessionStore.setPlanEnabled(this, false)
-            return
+            return false
         }
 
-        ReminderSessionStore.setPlanEnabled(this, true)
+        val plan = try {
+            ReminderSessionStore.addPlan(
+                context = this,
+                name = name.trim(),
+                hour = hour,
+                minute = minute,
+                enabled = true
+            )
+        } catch (_: Exception) {
+            Toast.makeText(
+                this,
+                getString(R.string.msg_plan_save_failed),
+                Toast.LENGTH_SHORT
+            ).show()
+            return false
+        }
+
         val scheduled = scheduleNextDailyReminder(
+            plan = plan,
             reason = getString(R.string.reason_plan_enabled)
         )
-
         if (scheduled) {
             Toast.makeText(
                 this,
-                getString(R.string.msg_plan_enabled),
+                getString(R.string.msg_plan_added_enabled, plan.name),
                 Toast.LENGTH_SHORT
             ).show()
-            return
+            return true
         }
 
-        ReminderSessionStore.setPlanEnabled(this, false)
+        ReminderSessionStore.deletePlan(context = this, planId = plan.id)
         Toast.makeText(
             this,
             getString(R.string.msg_exact_alarm_failed),
             Toast.LENGTH_SHORT
         ).show()
         openPermissionSettings(PermissionAction.OPEN_EXACT_ALARM_SETTINGS)
+        return false
     }
 
-    private fun disableDailyPlan() {
-        ReminderSessionStore.setPlanEnabled(this, false)
-        ReminderSessionStore.markReminderConfirmed(this)
-        ReminderScheduler.cancelAllScheduledReminders(this)
-        ReminderNotifier.cancelReminderNotification(this)
+    private fun editPlan(
+        planId: String,
+        name: String,
+        hour: Int,
+        minute: Int
+    ): Boolean {
+        val currentPlan = ReminderSessionStore.getPlan(this, planId) ?: return false
+        if (name.isBlank()) {
+            Toast.makeText(
+                this,
+                getString(R.string.msg_plan_name_required),
+                Toast.LENGTH_SHORT
+            ).show()
+            return false
+        }
+
+        val updatedPlan = currentPlan.copy(
+            name = name.trim(),
+            hour = hour,
+            minute = minute
+        )
+
+        if (currentPlan.enabled) {
+            if (!ensureReminderSchedulingAllowed()) {
+                return false
+            }
+            val scheduled = scheduleNextDailyReminder(
+                plan = updatedPlan,
+                reason = getString(R.string.reason_time_updated)
+            )
+            if (!scheduled) {
+                Toast.makeText(
+                    this,
+                    getString(R.string.msg_time_updated_reschedule_failed),
+                    Toast.LENGTH_SHORT
+                ).show()
+                openPermissionSettings(PermissionAction.OPEN_EXACT_ALARM_SETTINGS)
+                return false
+            }
+            ReminderSessionStore.updatePlan(this, updatedPlan)
+            if (updatedPlan.isReminderActive) {
+                ReminderNotifier.showNotification(
+                    context = this,
+                    plan = updatedPlan,
+                    reason = getString(R.string.reason_time_updated)
+                )
+            }
+            Toast.makeText(
+                this,
+                getString(R.string.msg_time_updated_rescheduled),
+                Toast.LENGTH_SHORT
+            ).show()
+            return true
+        }
+
+        ReminderSessionStore.updatePlan(this, updatedPlan)
         Toast.makeText(
             this,
-            getString(R.string.msg_plan_disabled),
+            getString(R.string.msg_plan_updated),
+            Toast.LENGTH_SHORT
+        ).show()
+        return true
+    }
+
+    private fun setPlanEnabled(
+        planId: String,
+        enabled: Boolean
+    ): Boolean {
+        val plan = ReminderSessionStore.getPlan(this, planId) ?: return false
+        if (plan.enabled == enabled) {
+            return true
+        }
+
+        if (enabled) {
+            if (!ensureReminderSchedulingAllowed()) {
+                return false
+            }
+            val enabledPlan = plan.copy(enabled = true)
+            ReminderSessionStore.updatePlan(this, enabledPlan)
+            val scheduled = scheduleNextDailyReminder(
+                plan = enabledPlan,
+                reason = getString(R.string.reason_plan_enabled)
+            )
+            if (!scheduled) {
+                ReminderSessionStore.updatePlan(this, plan)
+                Toast.makeText(
+                    this,
+                    getString(R.string.msg_exact_alarm_failed),
+                    Toast.LENGTH_SHORT
+                ).show()
+                openPermissionSettings(PermissionAction.OPEN_EXACT_ALARM_SETTINGS)
+                return false
+            }
+            Toast.makeText(
+                this,
+                getString(R.string.msg_plan_enabled_name, plan.name),
+                Toast.LENGTH_SHORT
+            ).show()
+            return true
+        }
+
+        ReminderSessionStore.updatePlan(this, plan.copy(enabled = false))
+        ReminderSessionStore.markReminderConfirmed(this, plan.id)
+        ReminderScheduler.cancelPlanReminders(context = this, plan = plan)
+        ReminderNotifier.cancelReminderNotification(context = this, plan = plan)
+        Toast.makeText(
+            this,
+            getString(R.string.msg_plan_disabled_name, plan.name),
+            Toast.LENGTH_SHORT
+        ).show()
+        return true
+    }
+
+    private fun deletePlan(planId: String): Boolean {
+        val plan = ReminderSessionStore.getPlan(this, planId) ?: return false
+        ReminderSessionStore.deletePlan(context = this, planId = planId)
+        ReminderScheduler.cancelPlanReminders(context = this, plan = plan)
+        ReminderNotifier.cancelReminderNotification(context = this, plan = plan)
+        Toast.makeText(
+            this,
+            getString(R.string.msg_plan_deleted, plan.name),
+            Toast.LENGTH_SHORT
+        ).show()
+        return true
+    }
+
+    private fun confirmStopReminder(planId: String) {
+        val plan = ReminderSessionStore.getPlan(this, planId) ?: return
+        ReminderSessionStore.markReminderConfirmed(this, plan.id)
+        ReminderScheduler.cancelPlanFallbackReminder(context = this, plan = plan)
+        ReminderNotifier.cancelReminderNotification(context = this, plan = plan)
+        Toast.makeText(
+            this,
+            getString(R.string.msg_reminder_stopped_plan, plan.name),
             Toast.LENGTH_SHORT
         ).show()
     }
 
-    private fun rescheduleDailyPlan(): Boolean {
-        if (!ReminderSessionStore.isPlanEnabled(this)) {
-            return false
-        }
-
-        if (!ensureReminderSchedulingAllowed()) {
-            return false
-        }
-
-        val scheduled = scheduleNextDailyReminder(
-            reason = getString(R.string.reason_time_updated)
-        )
-
-        if (!scheduled) {
-            Toast.makeText(
-                this,
-                getString(R.string.msg_exact_alarm_failed),
-                Toast.LENGTH_SHORT
-            ).show()
-            openPermissionSettings(PermissionAction.OPEN_EXACT_ALARM_SETTINGS)
-        }
-
-        return scheduled
-    }
-
-    private fun scheduleNextDailyReminder(reason: String): Boolean {
-        val selectedTime = loadOrInitializeSelectedTime()
+    private fun scheduleNextDailyReminder(
+        plan: ReminderPlan,
+        reason: String
+    ): Boolean {
         val triggerAtMs = ReminderTimeCalculator.computeNextDailyTriggerAtMs(
             nowMs = System.currentTimeMillis(),
             zoneId = ZoneId.systemDefault(),
-            hour = selectedTime.first,
-            minute = selectedTime.second
+            hour = plan.hour,
+            minute = plan.minute
         )
 
         return ReminderScheduler.scheduleDailyAt(
             context = this,
+            plan = plan,
             triggerAtMs = triggerAtMs,
             reason = reason
         )
     }
 
-    private fun confirmStopReminder() {
-        ReminderSessionStore.markReminderConfirmed(this)
-        ReminderScheduler.cancelFallbackReminder(this)
-        ReminderNotifier.cancelReminderNotification(this)
-        Toast.makeText(
-            this,
-            getString(R.string.msg_reminder_stopped),
-            Toast.LENGTH_SHORT
-        ).show()
+    private fun rescheduleEnabledPlansSilently() {
+        val plans = loadPlans()
+        plans.forEach { plan ->
+            if (!plan.enabled) {
+                return@forEach
+            }
+            scheduleNextDailyReminder(
+                plan = plan,
+                reason = getString(R.string.reason_plan_enabled)
+            )
+        }
     }
 
     private fun buildPermissionItems(): List<PermissionHealthItem> {
@@ -348,15 +538,16 @@ class MainActivity : ComponentActivity() {
 }
 
 @Composable
-private fun ReminderTestScreen(
-    isReminderActive: Boolean,
-    isPlanEnabled: Boolean,
-    selectedHour: Int,
-    selectedMinute: Int,
-    onTimeSelected: (Int, Int) -> Unit,
-    onEnablePlanClick: () -> Unit,
-    onDisablePlanClick: () -> Unit,
-    onConfirmStopClick: () -> Unit,
+private fun ReminderHomeScreen(
+    plans: List<ReminderPlan>,
+    maxPlans: Int,
+    onAddPlanClick: () -> Unit,
+    onEditPlanClick: (ReminderPlan) -> Unit,
+    onDeletePlanClick: (ReminderPlan) -> Unit,
+    onMoveUpClick: (ReminderPlan) -> Unit,
+    onMoveDownClick: (ReminderPlan) -> Unit,
+    onPlanEnabledChange: (ReminderPlan, Boolean) -> Unit,
+    onConfirmStopClick: (ReminderPlan) -> Unit,
     onOpenSettingsClick: () -> Unit
 ) {
     Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
@@ -368,30 +559,16 @@ private fun ReminderTestScreen(
                 .verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            val context = LocalContext.current
-            val selectedTimeText = remember(selectedHour, selectedMinute, context) {
-                formatReminderTime(context, selectedHour, selectedMinute)
-            }
-
             Text(
                 text = stringResource(R.string.test_page_title),
                 style = MaterialTheme.typography.headlineSmall
             )
             Text(text = stringResource(R.string.test_page_description))
-            Text(text = stringResource(R.string.label_selected_time, selectedTimeText))
+            Text(text = stringResource(R.string.label_plan_count, plans.size, maxPlans))
             Text(
                 text = stringResource(
-                    if (isPlanEnabled) {
-                        R.string.status_plan_enabled
-                    } else {
-                        R.string.status_plan_disabled
-                    }
-                )
-            )
-            Text(
-                text = stringResource(
-                    if (isReminderActive) {
-                        R.string.status_reminder_active
+                    if (plans.any { it.isReminderActive }) {
+                        R.string.status_reminder_active_multi
                     } else {
                         R.string.status_reminder_idle
                     }
@@ -399,45 +576,32 @@ private fun ReminderTestScreen(
             )
 
             Button(
-                onClick = {
-                    TimePickerDialog(
-                        context,
-                        { _, hourOfDay, minute ->
-                            onTimeSelected(hourOfDay, minute)
-                        },
-                        selectedHour,
-                        selectedMinute,
-                        DateFormat.is24HourFormat(context)
-                    ).show()
-                },
+                onClick = onAddPlanClick,
+                enabled = plans.size < maxPlans,
                 modifier = Modifier.fillMaxWidth()
             ) {
-                Text(text = stringResource(R.string.btn_select_time))
+                Text(text = stringResource(R.string.btn_add_plan))
             }
 
-            if (isPlanEnabled) {
-                Button(
-                    onClick = onDisablePlanClick,
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Text(text = stringResource(R.string.btn_disable_plan))
-                }
-            } else {
-                Button(
-                    onClick = onEnablePlanClick,
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Text(text = stringResource(R.string.btn_enable_plan))
-                }
+            if (plans.isEmpty()) {
+                Text(
+                    text = stringResource(R.string.empty_plan_list),
+                    style = MaterialTheme.typography.bodyMedium
+                )
             }
 
-            if (isReminderActive) {
-                Button(
-                    onClick = onConfirmStopClick,
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Text(text = stringResource(R.string.btn_confirm_stop_reminder))
-                }
+            plans.forEachIndexed { index, plan ->
+                PlanCard(
+                    plan = plan,
+                    index = index,
+                    totalCount = plans.size,
+                    onEditClick = { onEditPlanClick(plan) },
+                    onDeleteClick = { onDeletePlanClick(plan) },
+                    onMoveUpClick = { onMoveUpClick(plan) },
+                    onMoveDownClick = { onMoveDownClick(plan) },
+                    onPlanEnabledChange = { enabled -> onPlanEnabledChange(plan, enabled) },
+                    onConfirmStopClick = { onConfirmStopClick(plan) }
+                )
             }
 
             Button(
@@ -448,6 +612,217 @@ private fun ReminderTestScreen(
             }
         }
     }
+}
+
+@Composable
+private fun PlanCard(
+    plan: ReminderPlan,
+    index: Int,
+    totalCount: Int,
+    onEditClick: () -> Unit,
+    onDeleteClick: () -> Unit,
+    onMoveUpClick: () -> Unit,
+    onMoveDownClick: () -> Unit,
+    onPlanEnabledChange: (Boolean) -> Unit,
+    onConfirmStopClick: () -> Unit
+) {
+    val context = LocalContext.current
+    val timeText = remember(plan.hour, plan.minute, context) {
+        formatReminderTime(
+            context = context,
+            hour = plan.hour,
+            minute = plan.minute
+        )
+    }
+
+    Card(modifier = Modifier.fillMaxWidth()) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Column(
+                    modifier = Modifier.weight(1f),
+                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    Text(
+                        text = plan.name,
+                        style = MaterialTheme.typography.titleMedium
+                    )
+                    Text(
+                        text = stringResource(R.string.label_selected_time, timeText),
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                    Text(
+                        text = stringResource(
+                            if (plan.enabled) {
+                                R.string.status_plan_enabled
+                            } else {
+                                R.string.status_plan_disabled
+                            }
+                        ),
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                }
+                Switch(
+                    checked = plan.enabled,
+                    onCheckedChange = onPlanEnabledChange
+                )
+            }
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Button(
+                    onClick = onEditClick,
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Text(text = stringResource(R.string.btn_edit_plan))
+                }
+                Button(
+                    onClick = onDeleteClick,
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Text(text = stringResource(R.string.btn_delete_plan))
+                }
+            }
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Button(
+                    onClick = onMoveUpClick,
+                    enabled = index > 0,
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Text(text = stringResource(R.string.btn_move_up))
+                }
+                Button(
+                    onClick = onMoveDownClick,
+                    enabled = index < totalCount - 1,
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Text(text = stringResource(R.string.btn_move_down))
+                }
+            }
+
+            if (plan.isReminderActive) {
+                Button(
+                    onClick = onConfirmStopClick,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text(text = stringResource(R.string.btn_confirm_stop_plan_reminder))
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun PlanEditorDialog(
+    planId: String?,
+    initialName: String,
+    initialHour: Int,
+    initialMinute: Int,
+    maxNameLength: Int,
+    onDismiss: () -> Unit,
+    onSave: (String, Int, Int) -> Unit
+) {
+    var name by rememberSaveable(initialName, planId) {
+        mutableStateOf(initialName)
+    }
+    var hour by rememberSaveable(initialHour, planId) {
+        mutableStateOf(initialHour)
+    }
+    var minute by rememberSaveable(initialMinute, planId) {
+        mutableStateOf(initialMinute)
+    }
+    val context = LocalContext.current
+    val selectedTimeText = remember(hour, minute, context) {
+        formatReminderTime(
+            context = context,
+            hour = hour,
+            minute = minute
+        )
+    }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Text(
+                text = stringResource(
+                    if (planId == null) {
+                        R.string.dialog_add_plan_title
+                    } else {
+                        R.string.dialog_edit_plan_title
+                    }
+                )
+            )
+        },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                OutlinedTextField(
+                    value = name,
+                    onValueChange = { changed ->
+                        if (changed.length <= maxNameLength) {
+                            name = changed
+                        }
+                    },
+                    label = { Text(stringResource(R.string.label_plan_name)) },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+                Text(
+                    text = stringResource(
+                        R.string.label_name_length,
+                        name.length,
+                        maxNameLength
+                    ),
+                    style = MaterialTheme.typography.bodySmall
+                )
+                Text(text = stringResource(R.string.label_selected_time, selectedTimeText))
+                Button(
+                    onClick = {
+                        TimePickerDialog(
+                            context,
+                            { _, hourOfDay, selectedMinute ->
+                                hour = hourOfDay
+                                minute = selectedMinute
+                            },
+                            hour,
+                            minute,
+                            DateFormat.is24HourFormat(context)
+                        ).show()
+                    },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text(text = stringResource(R.string.btn_select_time))
+                }
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = {
+                    onSave(name.trim(), hour, minute)
+                },
+                enabled = name.trim().isNotEmpty()
+            ) {
+                Text(text = stringResource(R.string.dialog_btn_save))
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text(text = stringResource(R.string.dialog_btn_cancel))
+            }
+        }
+    )
 }
 
 private fun formatReminderTime(
@@ -563,16 +938,38 @@ private fun permissionStateColor(state: PermissionState): Color {
 
 @Preview(showBackground = true)
 @Composable
-private fun ReminderTestScreenPreview() {
+private fun ReminderHomeScreenPreview() {
     PillRingTheme {
-        ReminderTestScreen(
-            isReminderActive = false,
-            isPlanEnabled = false,
-            selectedHour = 9,
-            selectedMinute = 0,
-            onTimeSelected = { _, _ -> },
-            onEnablePlanClick = {},
-            onDisablePlanClick = {},
+        ReminderHomeScreen(
+            plans = listOf(
+                ReminderPlan(
+                    id = "1",
+                    name = "Morning pills",
+                    hour = 8,
+                    minute = 30,
+                    enabled = true,
+                    notificationId = 1001,
+                    isReminderActive = false,
+                    suppressNextDeleteFallback = false
+                ),
+                ReminderPlan(
+                    id = "2",
+                    name = "After lunch",
+                    hour = 13,
+                    minute = 0,
+                    enabled = false,
+                    notificationId = 1002,
+                    isReminderActive = true,
+                    suppressNextDeleteFallback = false
+                )
+            ),
+            maxPlans = ReminderSessionStore.MAX_PLAN_COUNT,
+            onAddPlanClick = {},
+            onEditPlanClick = {},
+            onDeletePlanClick = {},
+            onMoveUpClick = {},
+            onMoveDownClick = {},
+            onPlanEnabledChange = { _, _ -> },
             onConfirmStopClick = {},
             onOpenSettingsClick = {}
         )
