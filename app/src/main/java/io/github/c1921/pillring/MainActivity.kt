@@ -2,6 +2,7 @@ package io.github.c1921.pillring
 
 import android.Manifest
 import android.content.Context
+import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Bundle
 import android.text.format.DateFormat
@@ -31,7 +32,6 @@ import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.DropdownMenu
@@ -55,6 +55,7 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.rememberTimePickerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -76,6 +77,7 @@ import androidx.lifecycle.LifecycleEventObserver
 import io.github.c1921.pillring.notification.ReminderNotifier
 import io.github.c1921.pillring.notification.ReminderPlan
 import io.github.c1921.pillring.notification.ReminderScheduler
+import io.github.c1921.pillring.notification.ReminderContract
 import io.github.c1921.pillring.notification.ReminderSessionStore
 import io.github.c1921.pillring.notification.ReminderTimeCalculator
 import io.github.c1921.pillring.locale.AppLanguage
@@ -97,7 +99,8 @@ private const val MAX_PLAN_NAME_LENGTH = 30
 
 private enum class AppScreen {
     HOME,
-    SETTINGS
+    SETTINGS,
+    REMINDER_CONFIRM
 }
 
 private data class PlanEditorState(
@@ -108,8 +111,11 @@ private data class PlanEditorState(
 )
 
 class MainActivity : ComponentActivity() {
+    private var pendingReminderConfirmPlanId: String? by mutableStateOf(null)
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        pendingReminderConfirmPlanId = extractReminderConfirmPlanId(intent)
         if (!hasNotificationPermission()) {
             requestPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
         }
@@ -135,6 +141,9 @@ class MainActivity : ComponentActivity() {
             var currentScreen by rememberSaveable {
                 mutableStateOf(AppScreen.HOME)
             }
+            var reminderConfirmPlanId by rememberSaveable {
+                mutableStateOf<String?>(null)
+            }
             var planEditorState by remember {
                 mutableStateOf<PlanEditorState?>(null)
             }
@@ -157,8 +166,28 @@ class MainActivity : ComponentActivity() {
                 }
             }
 
+            LaunchedEffect(pendingReminderConfirmPlanId, plans) {
+                val requestedPlanId = pendingReminderConfirmPlanId ?: return@LaunchedEffect
+                pendingReminderConfirmPlanId = null
+
+                val targetPlan = plans.firstOrNull { it.id == requestedPlanId }
+                if (targetPlan?.isReminderActive == true) {
+                    reminderConfirmPlanId = targetPlan.id
+                    currentScreen = AppScreen.REMINDER_CONFIRM
+                } else {
+                    reminderConfirmPlanId = null
+                    currentScreen = AppScreen.HOME
+                    Toast.makeText(
+                        this@MainActivity,
+                        getString(R.string.msg_reminder_confirm_entry_invalid),
+                        Toast.LENGTH_SHORT
+                    ).show()
+                }
+            }
+
             PillRingTheme {
-                BackHandler(enabled = currentScreen == AppScreen.SETTINGS) {
+                BackHandler(enabled = currentScreen != AppScreen.HOME) {
+                    reminderConfirmPlanId = null
                     currentScreen = AppScreen.HOME
                 }
 
@@ -210,11 +239,6 @@ class MainActivity : ComponentActivity() {
                                 plans = loadPlans()
                                 permissionItems = buildPermissionItems()
                             },
-                            onConfirmStopClick = { plan ->
-                                confirmStopReminder(plan.id)
-                                plans = loadPlans()
-                                permissionItems = buildPermissionItems()
-                            },
                             onOpenSettingsClick = {
                                 permissionItems = buildPermissionItems()
                                 currentScreen = AppScreen.SETTINGS
@@ -245,6 +269,38 @@ class MainActivity : ComponentActivity() {
                                 }
                             }
                         )
+                    }
+
+                    AppScreen.REMINDER_CONFIRM -> {
+                        val reminderPlan = plans.firstOrNull { it.id == reminderConfirmPlanId }
+                        if (reminderPlan?.isReminderActive == true) {
+                            ReminderConfirmScreen(
+                                plan = reminderPlan,
+                                onBackClick = {
+                                    reminderConfirmPlanId = null
+                                    currentScreen = AppScreen.HOME
+                                },
+                                onConfirmClick = {
+                                    confirmStopReminder(reminderPlan.id)
+                                    plans = loadPlans()
+                                    permissionItems = buildPermissionItems()
+                                    reminderConfirmPlanId = null
+                                    currentScreen = AppScreen.HOME
+                                }
+                            )
+                        } else {
+                            LaunchedEffect(reminderConfirmPlanId, plans) {
+                                if (reminderConfirmPlanId != null) {
+                                    reminderConfirmPlanId = null
+                                    currentScreen = AppScreen.HOME
+                                    Toast.makeText(
+                                        this@MainActivity,
+                                        getString(R.string.msg_reminder_confirm_entry_invalid),
+                                        Toast.LENGTH_SHORT
+                                    ).show()
+                                }
+                            }
+                        }
                     }
                 }
 
@@ -284,6 +340,21 @@ class MainActivity : ComponentActivity() {
                 }
             }
         }
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        pendingReminderConfirmPlanId = extractReminderConfirmPlanId(intent)
+    }
+
+    private fun extractReminderConfirmPlanId(intent: Intent?): String? {
+        if (intent?.action != ReminderContract.ACTION_OPEN_REMINDER_CONFIRM) {
+            return null
+        }
+        return intent.getStringExtra(ReminderContract.EXTRA_PLAN_ID)
+            ?.trim()
+            ?.takeIf { it.isNotEmpty() }
     }
 
     private fun loadPlans(): List<ReminderPlan> {
@@ -603,7 +674,6 @@ private fun ReminderHomeScreen(
     onMoveUpClick: (ReminderPlan) -> Unit,
     onMoveDownClick: (ReminderPlan) -> Unit,
     onPlanEnabledChange: (ReminderPlan, Boolean) -> Unit,
-    onConfirmStopClick: (ReminderPlan) -> Unit,
     onOpenSettingsClick: () -> Unit
 ) {
     val hasActiveReminder = plans.any { it.isReminderActive }
@@ -767,8 +837,7 @@ private fun ReminderHomeScreen(
                         onDeleteClick = { onDeletePlanClick(plan) },
                         onMoveUpClick = { onMoveUpClick(plan) },
                         onMoveDownClick = { onMoveDownClick(plan) },
-                        onPlanEnabledChange = { enabled -> onPlanEnabledChange(plan, enabled) },
-                        onConfirmStopClick = { onConfirmStopClick(plan) }
+                        onPlanEnabledChange = { enabled -> onPlanEnabledChange(plan, enabled) }
                     )
                 }
             }
@@ -785,8 +854,7 @@ private fun PlanCard(
     onDeleteClick: () -> Unit,
     onMoveUpClick: () -> Unit,
     onMoveDownClick: () -> Unit,
-    onPlanEnabledChange: (Boolean) -> Unit,
-    onConfirmStopClick: () -> Unit
+    onPlanEnabledChange: (Boolean) -> Unit
 ) {
     val context = LocalContext.current
     val timeText = remember(plan.hour, plan.minute, context) {
@@ -933,18 +1001,95 @@ private fun PlanCard(
                     modifier = Modifier.padding(start = 8.dp)
                 )
             }
+        }
+    }
+}
 
-            if (plan.isReminderActive) {
-                FilledTonalButton(
-                    onClick = onConfirmStopClick,
-                    colors = ButtonDefaults.filledTonalButtonColors(
-                        containerColor = MaterialTheme.colorScheme.errorContainer,
-                        contentColor = MaterialTheme.colorScheme.onErrorContainer
-                    ),
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Text(text = stringResource(R.string.btn_confirm_stop_plan_reminder))
+@Composable
+@OptIn(ExperimentalMaterial3Api::class)
+private fun ReminderConfirmScreen(
+    plan: ReminderPlan,
+    onBackClick: () -> Unit,
+    onConfirmClick: () -> Unit
+) {
+    val context = LocalContext.current
+    val reminderTimeText = remember(plan.hour, plan.minute, context) {
+        formatReminderTime(
+            context = context,
+            hour = plan.hour,
+            minute = plan.minute
+        )
+    }
+
+    Scaffold(
+        modifier = Modifier
+            .fillMaxSize()
+            .testTag(UiTestTags.REMINDER_CONFIRM_SCREEN),
+        topBar = {
+            TopAppBar(
+                title = {
+                    Text(
+                        text = stringResource(R.string.reminder_confirm_page_title),
+                        style = MaterialTheme.typography.titleLarge
+                    )
+                },
+                navigationIcon = {
+                    IconButton(onClick = onBackClick) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = stringResource(R.string.cd_navigate_back)
+                        )
+                    }
                 }
+            )
+        }
+    ) { innerPadding ->
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(innerPadding)
+                .padding(horizontal = 16.dp, vertical = 16.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .testTag(UiTestTags.REMINDER_CONFIRM_SECONDARY_CONTENT),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.surfaceContainerHigh
+                )
+            ) {
+                Column(
+                    modifier = Modifier.padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    Text(
+                        text = stringResource(R.string.reminder_confirm_secondary_title),
+                        style = MaterialTheme.typography.titleMedium
+                    )
+                    Text(
+                        text = stringResource(R.string.reminder_confirm_plan_label, plan.name),
+                        style = MaterialTheme.typography.bodyLarge
+                    )
+                    Text(
+                        text = stringResource(R.string.reminder_confirm_time_label, reminderTimeText),
+                        style = MaterialTheme.typography.bodyLarge
+                    )
+                    Text(
+                        text = stringResource(R.string.reminder_confirm_description),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+
+            Button(
+                onClick = onConfirmClick,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .testTag(UiTestTags.REMINDER_CONFIRM_PRIMARY_BUTTON)
+            ) {
+                Text(text = stringResource(R.string.btn_confirm_stop_plan_reminder))
             }
         }
     }
@@ -1480,7 +1625,6 @@ private fun ReminderHomeScreenPreview() {
             onMoveUpClick = {},
             onMoveDownClick = {},
             onPlanEnabledChange = { _, _ -> },
-            onConfirmStopClick = {},
             onOpenSettingsClick = {}
         )
     }

@@ -50,6 +50,7 @@
     <string name="msg_plan_disabled_name">%1$s disabled.</string>
     <string name="msg_plan_deleted">%1$s deleted.</string>
     <string name="msg_reminder_stopped_plan">Stopped current reminder for %1$s.</string>
+    <string name="msg_reminder_confirm_entry_invalid">This reminder is no longer active.</string>
 
     <string name="notification_channel_name">Pill reminders</string>
     <string name="notification_channel_description">High priority reminder notifications for medicine schedule.</string>
@@ -65,6 +66,11 @@
     <string name="status_reminder_idle">No active reminder right now.</string>
     <string name="empty_plan_list">No plans yet. Add one to get started.</string>
     <string name="default_plan_name">Plan %1$d</string>
+    <string name="reminder_confirm_page_title">Confirm reminder</string>
+    <string name="reminder_confirm_secondary_title">Reminder details</string>
+    <string name="reminder_confirm_plan_label">Plan: %1$s</string>
+    <string name="reminder_confirm_time_label">Scheduled time: %1$s</string>
+    <string name="reminder_confirm_description">Tap confirm after taking medicine to stop this plan\'s current reminder.</string>
 
     <string name="settings_page_title">Settings</string>
     <string name="settings_page_description">Review permission health and fix issues that affect reminder reliability.</string>

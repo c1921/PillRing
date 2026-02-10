@@ -50,6 +50,7 @@
     <string name="msg_plan_disabled_name">已停用 %1$s。</string>
     <string name="msg_plan_deleted">已删除 %1$s。</string>
     <string name="msg_reminder_stopped_plan">已停止 %1$s 的当前提醒。</string>
+    <string name="msg_reminder_confirm_entry_invalid">该提醒已不在进行中。</string>
 
     <string name="notification_channel_name">吃药提醒</string>
     <string name="notification_channel_description">用于药物计划的高优先级提醒通知。</string>
@@ -65,6 +66,11 @@
     <string name="status_reminder_idle">当前没有进行中的提醒。</string>
     <string name="empty_plan_list">还没有计划，先添加一个吧。</string>
     <string name="default_plan_name">计划 %1$d</string>
+    <string name="reminder_confirm_page_title">确认提醒</string>
+    <string name="reminder_confirm_secondary_title">提醒详情</string>
+    <string name="reminder_confirm_plan_label">计划：%1$s</string>
+    <string name="reminder_confirm_time_label">提醒时间：%1$s</string>
+    <string name="reminder_confirm_description">服药后点击确认，可停止该计划当前这一轮提醒。</string>
 
     <string name="settings_page_title">设置</string>
     <string name="settings_page_description">查看权限健康状态并修复影响提醒可靠性的设置项。</string>

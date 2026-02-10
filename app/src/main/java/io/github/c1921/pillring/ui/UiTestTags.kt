@@ -13,6 +13,9 @@ object UiTestTags {
     const val PLAN_CARD_ACTION_MOVE_UP = "plan_card_action_move_up"
     const val PLAN_CARD_ACTION_MOVE_DOWN = "plan_card_action_move_down"
     const val PLAN_CARD_ACTION_DELETE = "plan_card_action_delete"
+    const val REMINDER_CONFIRM_SCREEN = "reminder_confirm_screen"
+    const val REMINDER_CONFIRM_PRIMARY_BUTTON = "reminder_confirm_primary_button"
+    const val REMINDER_CONFIRM_SECONDARY_CONTENT = "reminder_confirm_secondary_content"
 
     const val PLAN_EDITOR_SELECTED_TIME = "plan_editor_selected_time"
     const val PLAN_EDITOR_SELECT_TIME_BUTTON = "plan_editor_select_time_button"
