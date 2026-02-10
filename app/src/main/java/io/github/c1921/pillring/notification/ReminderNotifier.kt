@@ -76,6 +76,10 @@ object ReminderNotifier {
             .notify(ReminderContract.NOTIFICATION_ID, notification)
     }
 
+    fun cancelReminderNotification(context: Context) {
+        NotificationManagerCompat.from(context).cancel(ReminderContract.NOTIFICATION_ID)
+    }
+
     private fun hasNotificationPermission(context: Context): Boolean {
         return ContextCompat.checkSelfPermission(
             context,

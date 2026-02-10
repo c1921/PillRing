@@ -3,17 +3,21 @@
     <string name="test_page_title">Notification Test</string>
     <string name="test_page_description">Use exact alarms to trigger a reminder notification after 10 seconds.</string>
     <string name="btn_schedule_ongoing">Send ongoing notification in 10 seconds</string>
+    <string name="btn_confirm_stop_reminder">Confirm and stop reminder</string>
 
     <string name="msg_notification_permission_required">Notification permission is required.</string>
     <string name="msg_notification_permission_denied">Notification permission denied.</string>
     <string name="msg_exact_alarm_required">Exact alarm permission is required.</string>
     <string name="msg_exact_alarm_failed">Failed to schedule exact alarm.</string>
     <string name="msg_scheduled_ongoing">Ongoing reminder scheduled for 10 seconds later.</string>
+    <string name="msg_reminder_stopped">Reminder stopped for this round.</string>
 
     <string name="notification_channel_name">Pill reminders</string>
     <string name="notification_channel_description">High priority reminder notifications for medicine schedule.</string>
     <string name="notification_title_ongoing">Pill reminder</string>
     <string name="notification_text_ongoing">Time to take your medicine.</string>
+    <string name="status_reminder_active">Reminder is active. Confirm to stop this round.</string>
+    <string name="status_reminder_idle">Reminder is idle. You can trigger a test reminder.</string>
 
     <string name="reason_manual_ongoing">Scheduled from ongoing test button.</string>
     <string name="reason_delete_fallback">Notification dismissed; fallback reminder in 30 seconds. Previous reason: %1$s</string>

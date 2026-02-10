@@ -11,6 +11,14 @@ class NotificationDeleteReceiver : BroadcastReceiver() {
             return
         }
 
+        if (ReminderSessionStore.consumeSuppressDeleteFallback(context)) {
+            return
+        }
+
+        if (!ReminderSessionStore.isReminderActive(context)) {
+            return
+        }
+
         if (!ReminderScheduler.canScheduleExactAlarms(context)) {
             return
         }

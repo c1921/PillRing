@@ -21,13 +21,19 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import io.github.c1921.pillring.notification.ReminderContract
+import io.github.c1921.pillring.notification.ReminderNotifier
 import io.github.c1921.pillring.notification.ReminderScheduler
+import io.github.c1921.pillring.notification.ReminderSessionStore
 import io.github.c1921.pillring.ui.theme.PillRingTheme
 
 class MainActivity : ComponentActivity() {
@@ -38,8 +44,22 @@ class MainActivity : ComponentActivity() {
         }
         enableEdgeToEdge()
         setContent {
+            var isReminderActive by rememberSaveable {
+                mutableStateOf(ReminderSessionStore.isReminderActive(this))
+            }
             PillRingTheme {
-                ReminderTestScreen(onScheduleClick = ::scheduleReminder)
+                ReminderTestScreen(
+                    isReminderActive = isReminderActive,
+                    onScheduleClick = {
+                        if (scheduleReminder()) {
+                            isReminderActive = true
+                        }
+                    },
+                    onConfirmStopClick = {
+                        confirmStopReminder()
+                        isReminderActive = false
+                    }
+                )
             }
         }
     }
@@ -51,14 +71,14 @@ class MainActivity : ComponentActivity() {
         ) == PackageManager.PERMISSION_GRANTED
     }
 
-    private fun scheduleReminder() {
+    private fun scheduleReminder(): Boolean {
         if (!hasNotificationPermission()) {
             Toast.makeText(
                 this,
                 getString(R.string.msg_notification_permission_required),
                 Toast.LENGTH_SHORT
             ).show()
-            return
+            return false
         }
 
         if (!ReminderScheduler.canScheduleExactAlarms(this)) {
@@ -68,7 +88,7 @@ class MainActivity : ComponentActivity() {
                 Toast.LENGTH_SHORT
             ).show()
             openExactAlarmSettings()
-            return
+            return false
         }
 
         val scheduled = ReminderScheduler.scheduleExact(
@@ -78,11 +98,13 @@ class MainActivity : ComponentActivity() {
         )
 
         if (scheduled) {
+            ReminderSessionStore.markReminderTriggered(this)
             Toast.makeText(
                 this,
                 getString(R.string.msg_scheduled_ongoing),
                 Toast.LENGTH_SHORT
             ).show()
+            return true
         } else {
             Toast.makeText(
                 this,
@@ -90,7 +112,19 @@ class MainActivity : ComponentActivity() {
                 Toast.LENGTH_SHORT
             ).show()
             openExactAlarmSettings()
+            return false
         }
+    }
+
+    private fun confirmStopReminder() {
+        ReminderSessionStore.markReminderConfirmed(this)
+        ReminderScheduler.cancelScheduledReminder(this)
+        ReminderNotifier.cancelReminderNotification(this)
+        Toast.makeText(
+            this,
+            getString(R.string.msg_reminder_stopped),
+            Toast.LENGTH_SHORT
+        ).show()
     }
 
     private fun openExactAlarmSettings() {
@@ -113,7 +147,11 @@ class MainActivity : ComponentActivity() {
 }
 
 @Composable
-private fun ReminderTestScreen(onScheduleClick: () -> Unit) {
+private fun ReminderTestScreen(
+    isReminderActive: Boolean,
+    onScheduleClick: () -> Unit,
+    onConfirmStopClick: () -> Unit
+) {
     Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
         Column(
             modifier = Modifier
@@ -127,12 +165,30 @@ private fun ReminderTestScreen(onScheduleClick: () -> Unit) {
                 style = MaterialTheme.typography.headlineSmall
             )
             Text(text = stringResource(R.string.test_page_description))
+            Text(
+                text = stringResource(
+                    if (isReminderActive) {
+                        R.string.status_reminder_active
+                    } else {
+                        R.string.status_reminder_idle
+                    }
+                )
+            )
 
-            Button(
-                onClick = onScheduleClick,
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Text(text = stringResource(R.string.btn_schedule_ongoing))
+            if (isReminderActive) {
+                Button(
+                    onClick = onConfirmStopClick,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text(text = stringResource(R.string.btn_confirm_stop_reminder))
+                }
+            } else {
+                Button(
+                    onClick = onScheduleClick,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text(text = stringResource(R.string.btn_schedule_ongoing))
+                }
             }
         }
     }
@@ -142,6 +198,10 @@ private fun ReminderTestScreen(onScheduleClick: () -> Unit) {
 @Composable
 private fun ReminderTestScreenPreview() {
     PillRingTheme {
-        ReminderTestScreen(onScheduleClick = {})
+        ReminderTestScreen(
+            isReminderActive = false,
+            onScheduleClick = {},
+            onConfirmStopClick = {}
+        )
     }
 }
