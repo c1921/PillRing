@@ -3,7 +3,6 @@ package io.github.c1921.pillring.notification
 import android.content.Context
 import org.json.JSONArray
 import org.json.JSONObject
-import java.time.LocalDateTime
 import java.util.UUID
 
 object ReminderSessionStore {
@@ -11,20 +10,10 @@ object ReminderSessionStore {
 
     private const val PREFS_NAME = "reminder_session_store"
 
-    private const val KEY_SCHEMA_VERSION = "schema_version"
     private const val KEY_PLANS_JSON = "plans_json"
     private const val KEY_NEXT_NOTIFICATION_ID = "next_notification_id"
 
-    private const val SCHEMA_VERSION = 2
     private const val DEFAULT_NOTIFICATION_ID_START = 1001
-    private const val LEGACY_PLAN_NAME = "Plan 1"
-
-    // Legacy keys for migration.
-    private const val KEY_REMINDER_ACTIVE = "is_reminder_active"
-    private const val KEY_SUPPRESS_NEXT_DELETE_FALLBACK = "suppress_next_delete_fallback"
-    private const val KEY_PLAN_ENABLED = "is_plan_enabled"
-    private const val KEY_SELECTED_HOUR = "selected_hour"
-    private const val KEY_SELECTED_MINUTE = "selected_minute"
 
     private const val PLAN_ID = "id"
     private const val PLAN_NAME = "name"
@@ -36,7 +25,7 @@ object ReminderSessionStore {
     private const val PLAN_SUPPRESS_NEXT_DELETE_FALLBACK = "suppress_next_delete_fallback"
 
     fun getPlans(context: Context): List<ReminderPlan> {
-        ensureMigrated(context)
+        ensureInitialized(context)
         return readPlans(prefs(context))
     }
 
@@ -58,7 +47,7 @@ object ReminderSessionStore {
         val normalizedName = name.trim().takeIf { it.isNotEmpty() }
             ?: throw IllegalArgumentException("plan name must not be blank")
 
-        ensureMigrated(context)
+        ensureInitialized(context)
         synchronized(this) {
             val preferences = prefs(context)
             val plans = readPlans(preferences).toMutableList()
@@ -90,7 +79,7 @@ object ReminderSessionStore {
         val normalizedName = plan.name.trim().takeIf { it.isNotEmpty() }
             ?: throw IllegalArgumentException("plan name must not be blank")
 
-        ensureMigrated(context)
+        ensureInitialized(context)
         synchronized(this) {
             val preferences = prefs(context)
             val plans = readPlans(preferences).toMutableList()
@@ -107,7 +96,7 @@ object ReminderSessionStore {
         context: Context,
         planId: String
     ) {
-        ensureMigrated(context)
+        ensureInitialized(context)
         synchronized(this) {
             val preferences = prefs(context)
             val plans = readPlans(preferences).toMutableList()
@@ -122,7 +111,7 @@ object ReminderSessionStore {
         context: Context,
         planId: String
     ) {
-        ensureMigrated(context)
+        ensureInitialized(context)
         synchronized(this) {
             val preferences = prefs(context)
             val plans = readPlans(preferences).toMutableList()
@@ -141,7 +130,7 @@ object ReminderSessionStore {
         context: Context,
         planId: String
     ) {
-        ensureMigrated(context)
+        ensureInitialized(context)
         synchronized(this) {
             val preferences = prefs(context)
             val plans = readPlans(preferences).toMutableList()
@@ -184,7 +173,7 @@ object ReminderSessionStore {
         context: Context,
         planId: String
     ): Boolean {
-        ensureMigrated(context)
+        ensureInitialized(context)
         synchronized(this) {
             val preferences = prefs(context)
             val plans = readPlans(preferences).toMutableList()
@@ -211,7 +200,7 @@ object ReminderSessionStore {
         planId: String,
         transform: (ReminderPlan) -> ReminderPlan
     ) {
-        ensureMigrated(context)
+        ensureInitialized(context)
         synchronized(this) {
             val preferences = prefs(context)
             val plans = readPlans(preferences).toMutableList()
@@ -224,77 +213,36 @@ object ReminderSessionStore {
         }
     }
 
-    private fun ensureMigrated(context: Context) {
+    private fun ensureInitialized(context: Context) {
         val preferences = prefs(context)
-        val alreadyMigrated = preferences.getInt(KEY_SCHEMA_VERSION, 0) >= SCHEMA_VERSION &&
-            preferences.contains(KEY_PLANS_JSON) &&
+        val initialized = preferences.contains(KEY_PLANS_JSON) &&
             preferences.contains(KEY_NEXT_NOTIFICATION_ID)
-        if (alreadyMigrated) {
+        if (initialized) {
             return
         }
 
         synchronized(this) {
             val latestPrefs = prefs(context)
-            val latestMigrated = latestPrefs.getInt(KEY_SCHEMA_VERSION, 0) >= SCHEMA_VERSION &&
-                latestPrefs.contains(KEY_PLANS_JSON) &&
+            val latestInitialized = latestPrefs.contains(KEY_PLANS_JSON) &&
                 latestPrefs.contains(KEY_NEXT_NOTIFICATION_ID)
-            if (latestMigrated) {
+            if (latestInitialized) {
                 return
             }
 
             val existingPlans = readPlans(latestPrefs)
-            val migratedPlans = when {
-                existingPlans.isNotEmpty() -> existingPlans
-                hasLegacyPlanData(latestPrefs) -> listOf(buildLegacyPlan(latestPrefs))
-                else -> emptyList()
+            val editor = latestPrefs.edit()
+
+            if (!latestPrefs.contains(KEY_PLANS_JSON)) {
+                editor.putString(KEY_PLANS_JSON, encodePlans(existingPlans))
             }
-            val nextNotificationId = (migratedPlans.maxOfOrNull { it.notificationId }
-                ?: (DEFAULT_NOTIFICATION_ID_START - 1)) + 1
+            if (!latestPrefs.contains(KEY_NEXT_NOTIFICATION_ID)) {
+                val nextNotificationId = (existingPlans.maxOfOrNull { it.notificationId }
+                    ?: (DEFAULT_NOTIFICATION_ID_START - 1)) + 1
+                editor.putInt(KEY_NEXT_NOTIFICATION_ID, nextNotificationId)
+            }
 
-            latestPrefs.edit()
-                .putInt(KEY_SCHEMA_VERSION, SCHEMA_VERSION)
-                .putString(KEY_PLANS_JSON, encodePlans(migratedPlans))
-                .putInt(KEY_NEXT_NOTIFICATION_ID, nextNotificationId)
-                .remove(KEY_REMINDER_ACTIVE)
-                .remove(KEY_SUPPRESS_NEXT_DELETE_FALLBACK)
-                .remove(KEY_PLAN_ENABLED)
-                .remove(KEY_SELECTED_HOUR)
-                .remove(KEY_SELECTED_MINUTE)
-                .apply()
+            editor.apply()
         }
-    }
-
-    private fun hasLegacyPlanData(preferences: android.content.SharedPreferences): Boolean {
-        return preferences.contains(KEY_SELECTED_HOUR) ||
-            preferences.contains(KEY_SELECTED_MINUTE) ||
-            preferences.contains(KEY_PLAN_ENABLED) ||
-            preferences.contains(KEY_REMINDER_ACTIVE) ||
-            preferences.contains(KEY_SUPPRESS_NEXT_DELETE_FALLBACK)
-    }
-
-    private fun buildLegacyPlan(preferences: android.content.SharedPreferences): ReminderPlan {
-        val hasHour = preferences.contains(KEY_SELECTED_HOUR)
-        val hasMinute = preferences.contains(KEY_SELECTED_MINUTE)
-        val (hour, minute) = if (hasHour && hasMinute) {
-            preferences.getInt(KEY_SELECTED_HOUR, 0) to preferences.getInt(KEY_SELECTED_MINUTE, 0)
-        } else {
-            val defaultTime = LocalDateTime.now().plusMinutes(1)
-            defaultTime.hour to defaultTime.minute
-        }
-
-        return ReminderPlan(
-            id = UUID.randomUUID().toString(),
-            name = LEGACY_PLAN_NAME,
-            hour = hour,
-            minute = minute,
-            enabled = preferences.getBoolean(KEY_PLAN_ENABLED, false),
-            notificationId = DEFAULT_NOTIFICATION_ID_START,
-            isReminderActive = preferences.getBoolean(KEY_REMINDER_ACTIVE, false),
-            suppressNextDeleteFallback = preferences.getBoolean(
-                KEY_SUPPRESS_NEXT_DELETE_FALLBACK,
-                false
-            )
-        )
     }
 
     private fun readPlans(preferences: android.content.SharedPreferences): List<ReminderPlan> {

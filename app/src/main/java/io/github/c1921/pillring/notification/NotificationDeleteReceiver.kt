@@ -11,7 +11,10 @@ class NotificationDeleteReceiver : BroadcastReceiver() {
             return
         }
 
-        val plan = resolvePlan(context = context, intent = intent) ?: return
+        val planId = intent.getStringExtra(ReminderContract.EXTRA_PLAN_ID)
+            ?.takeIf { it.isNotBlank() }
+            ?: return
+        val plan = ReminderSessionStore.getPlan(context, planId) ?: return
 
         if (ReminderSessionStore.consumeSuppressDeleteFallback(context, plan.id)) {
             return
@@ -40,18 +43,5 @@ class NotificationDeleteReceiver : BroadcastReceiver() {
             delayMs = ReminderContract.DELETE_RESCHEDULE_DELAY_MS,
             reason = fallbackReason
         )
-    }
-
-    private fun resolvePlan(
-        context: Context,
-        intent: Intent
-    ): ReminderPlan? {
-        val planId = intent.getStringExtra(ReminderContract.EXTRA_PLAN_ID)
-            ?.takeIf { it.isNotBlank() }
-        return if (planId == null) {
-            ReminderSessionStore.getPlans(context).firstOrNull()
-        } else {
-            ReminderSessionStore.getPlan(context, planId)
-        }
     }
 }

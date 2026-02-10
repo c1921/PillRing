@@ -76,17 +76,6 @@ object ReminderScheduler {
         cancelPlanFallbackReminder(context = context, plan = plan)
     }
 
-    fun cancelLegacySinglePlanReminders(context: Context) {
-        cancelLegacyReminderByRequestCode(
-            context = context,
-            requestCode = ReminderContract.REQUEST_CODE_ALARM_DAILY_LEGACY
-        )
-        cancelLegacyReminderByRequestCode(
-            context = context,
-            requestCode = ReminderContract.REQUEST_CODE_ALARM_FALLBACK_LEGACY
-        )
-    }
-
     private fun scheduleExactAt(
         context: Context,
         plan: ReminderPlan,
@@ -128,25 +117,6 @@ object ReminderScheduler {
             extraFlags = PendingIntent.FLAG_NO_CREATE
         ) ?: return
 
-        alarmManager.cancel(pendingIntent)
-        pendingIntent.cancel()
-    }
-
-    private fun cancelLegacyReminderByRequestCode(
-        context: Context,
-        requestCode: Int
-    ) {
-        val intent = Intent(context, ReminderAlarmReceiver::class.java).apply {
-            action = ReminderContract.ACTION_SHOW_REMINDER
-        }
-        val pendingIntent = PendingIntent.getBroadcast(
-            context,
-            requestCode,
-            intent,
-            PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_NO_CREATE
-        ) ?: return
-
-        val alarmManager = context.getSystemService(AlarmManager::class.java)
         alarmManager.cancel(pendingIntent)
         pendingIntent.cancel()
     }

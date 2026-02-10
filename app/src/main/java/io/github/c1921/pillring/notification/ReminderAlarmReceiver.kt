@@ -14,38 +14,26 @@ class ReminderAlarmReceiver : BroadcastReceiver() {
 
         val reason = intent.getStringExtra(ReminderContract.EXTRA_REASON).orEmpty()
         val alarmKind = intent.getStringExtra(ReminderContract.EXTRA_ALARM_KIND)
-        val plan = resolvePlan(context = context, intent = intent) ?: return
+            ?.takeIf { it.isNotBlank() }
+            ?: return
+        val planId = intent.getStringExtra(ReminderContract.EXTRA_PLAN_ID)
+            ?.takeIf { it.isNotBlank() }
+            ?: return
 
         when (alarmKind) {
             ReminderContract.ALARM_KIND_DAILY -> handleDailyReminder(
                 context = context,
-                planId = plan.id,
+                planId = planId,
                 reason = reason
             )
 
             ReminderContract.ALARM_KIND_FALLBACK -> handleFallbackReminder(
                 context = context,
-                planId = plan.id,
+                planId = planId,
                 reason = reason
             )
 
-            else -> {
-                // Backward compatibility for older alarms without alarm-kind extra.
-                ReminderNotifier.showNotification(context = context, plan = plan, reason = reason)
-            }
-        }
-    }
-
-    private fun resolvePlan(
-        context: Context,
-        intent: Intent
-    ): ReminderPlan? {
-        val planId = intent.getStringExtra(ReminderContract.EXTRA_PLAN_ID)
-            ?.takeIf { it.isNotBlank() }
-        return if (planId == null) {
-            ReminderSessionStore.getPlans(context).firstOrNull()
-        } else {
-            ReminderSessionStore.getPlan(context, planId)
+            else -> return
         }
     }
 

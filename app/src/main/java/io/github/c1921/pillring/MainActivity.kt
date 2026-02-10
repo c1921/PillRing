@@ -84,10 +84,6 @@ class MainActivity : ComponentActivity() {
             requestPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
         }
 
-        // Clean up possible single-plan legacy artifacts after store migration.
-        ReminderSessionStore.getPlans(this)
-        ReminderScheduler.cancelLegacySinglePlanReminders(this)
-        ReminderNotifier.cancelLegacyReminderNotification(this)
         rescheduleEnabledPlansSilently()
 
         enableEdgeToEdge()

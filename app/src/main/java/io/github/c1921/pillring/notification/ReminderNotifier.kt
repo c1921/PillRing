@@ -100,10 +100,6 @@ object ReminderNotifier {
         NotificationManagerCompat.from(context).cancel(plan.notificationId)
     }
 
-    fun cancelLegacyReminderNotification(context: Context) {
-        NotificationManagerCompat.from(context).cancel(ReminderContract.LEGACY_NOTIFICATION_ID)
-    }
-
     private fun hasNotificationPermission(context: Context): Boolean {
         return ContextCompat.checkSelfPermission(
             context,
