@@ -19,12 +19,11 @@ object ReminderScheduler {
     fun scheduleExact(
         context: Context,
         delayMs: Long,
-        mode: ReminderMode,
         reason: String
     ): Boolean {
         val alarmManager = context.getSystemService(AlarmManager::class.java)
         val triggerAtMs = System.currentTimeMillis() + delayMs
-        val alarmIntent = buildAlarmPendingIntent(context, mode, reason)
+        val alarmIntent = buildAlarmPendingIntent(context, reason)
 
         return try {
             alarmManager.setExactAndAllowWhileIdle(
@@ -40,18 +39,16 @@ object ReminderScheduler {
 
     private fun buildAlarmPendingIntent(
         context: Context,
-        mode: ReminderMode,
         reason: String
     ): PendingIntent {
         val intent = Intent(context, ReminderAlarmReceiver::class.java).apply {
             action = ReminderContract.ACTION_SHOW_REMINDER
-            putExtra(ReminderContract.EXTRA_MODE, mode.name)
             putExtra(ReminderContract.EXTRA_REASON, reason)
         }
 
         return PendingIntent.getBroadcast(
             context,
-            ReminderContract.alarmRequestCode(mode),
+            ReminderContract.REQUEST_CODE_ALARM_REMINDER,
             intent,
             PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
         )

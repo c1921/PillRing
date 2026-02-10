@@ -26,7 +26,6 @@ class NotificationDeleteReceiver : BroadcastReceiver() {
         ReminderScheduler.scheduleExact(
             context = context,
             delayMs = ReminderContract.DELETE_RESCHEDULE_DELAY_MS,
-            mode = ReminderMode.ONGOING,
             reason = fallbackReason
         )
     }

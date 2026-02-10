@@ -29,7 +29,7 @@ object ReminderNotifier {
         notificationManager.createNotificationChannel(channel)
     }
 
-    fun showNotification(context: Context, mode: ReminderMode, reason: String) {
+    fun showNotification(context: Context, reason: String) {
         if (!hasNotificationPermission(context)) {
             return
         }
@@ -55,24 +55,18 @@ object ReminderNotifier {
             PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
         )
 
-        val titleRes = when (mode) {
-            ReminderMode.ONGOING -> R.string.notification_title_ongoing
-            ReminderMode.DISMISSIBLE_TEST -> R.string.notification_title_dismissible
-        }
-        val textRes = when (mode) {
-            ReminderMode.ONGOING -> R.string.notification_text_ongoing
-            ReminderMode.DISMISSIBLE_TEST -> R.string.notification_text_dismissible
-        }
-
         val notification = NotificationCompat.Builder(context, ReminderContract.CHANNEL_ID)
             .setSmallIcon(R.drawable.ic_stat_pillring)
-            .setContentTitle(context.getString(titleRes))
-            .setContentText(context.getString(textRes))
-            .setStyle(NotificationCompat.BigTextStyle().bigText(context.getString(textRes)))
+            .setContentTitle(context.getString(R.string.notification_title_ongoing))
+            .setContentText(context.getString(R.string.notification_text_ongoing))
+            .setStyle(
+                NotificationCompat.BigTextStyle()
+                    .bigText(context.getString(R.string.notification_text_ongoing))
+            )
             .setPriority(NotificationCompat.PRIORITY_HIGH)
             .setCategory(NotificationCompat.CATEGORY_ALARM)
             .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
-            .setOngoing(mode == ReminderMode.ONGOING)
+            .setOngoing(true)
             .setAutoCancel(false)
             .setContentIntent(contentIntent)
             .setDeleteIntent(deleteIntent)

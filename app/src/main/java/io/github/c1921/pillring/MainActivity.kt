@@ -27,7 +27,6 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import io.github.c1921.pillring.notification.ReminderContract
-import io.github.c1921.pillring.notification.ReminderMode
 import io.github.c1921.pillring.notification.ReminderScheduler
 import io.github.c1921.pillring.ui.theme.PillRingTheme
 
@@ -52,7 +51,7 @@ class MainActivity : ComponentActivity() {
         ) == PackageManager.PERMISSION_GRANTED
     }
 
-    private fun scheduleReminder(mode: ReminderMode) {
+    private fun scheduleReminder() {
         if (!hasNotificationPermission()) {
             Toast.makeText(
                 this,
@@ -72,24 +71,18 @@ class MainActivity : ComponentActivity() {
             return
         }
 
-        val reason = when (mode) {
-            ReminderMode.ONGOING -> getString(R.string.reason_manual_ongoing)
-            ReminderMode.DISMISSIBLE_TEST -> getString(R.string.reason_manual_dismissible_test)
-        }
-
         val scheduled = ReminderScheduler.scheduleExact(
             context = this,
             delayMs = ReminderContract.INITIAL_TRIGGER_DELAY_MS,
-            mode = mode,
-            reason = reason
+            reason = getString(R.string.reason_manual_ongoing)
         )
 
         if (scheduled) {
-            val message = when (mode) {
-                ReminderMode.ONGOING -> getString(R.string.msg_scheduled_ongoing)
-                ReminderMode.DISMISSIBLE_TEST -> getString(R.string.msg_scheduled_dismissible)
-            }
-            Toast.makeText(this, message, Toast.LENGTH_SHORT).show()
+            Toast.makeText(
+                this,
+                getString(R.string.msg_scheduled_ongoing),
+                Toast.LENGTH_SHORT
+            ).show()
         } else {
             Toast.makeText(
                 this,
@@ -120,7 +113,7 @@ class MainActivity : ComponentActivity() {
 }
 
 @Composable
-private fun ReminderTestScreen(onScheduleClick: (ReminderMode) -> Unit) {
+private fun ReminderTestScreen(onScheduleClick: () -> Unit) {
     Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
         Column(
             modifier = Modifier
@@ -136,17 +129,10 @@ private fun ReminderTestScreen(onScheduleClick: (ReminderMode) -> Unit) {
             Text(text = stringResource(R.string.test_page_description))
 
             Button(
-                onClick = { onScheduleClick(ReminderMode.ONGOING) },
+                onClick = onScheduleClick,
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Text(text = stringResource(R.string.btn_schedule_ongoing))
-            }
-
-            Button(
-                onClick = { onScheduleClick(ReminderMode.DISMISSIBLE_TEST) },
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Text(text = stringResource(R.string.btn_schedule_dismissible_test))
             }
         }
     }

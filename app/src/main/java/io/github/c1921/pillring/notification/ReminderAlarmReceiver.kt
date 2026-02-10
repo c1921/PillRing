@@ -10,13 +10,8 @@ class ReminderAlarmReceiver : BroadcastReceiver() {
             return
         }
 
-        val mode = ReminderMode.fromName(intent.getStringExtra(ReminderContract.EXTRA_MODE))
         val reason = intent.getStringExtra(ReminderContract.EXTRA_REASON).orEmpty()
 
-        ReminderNotifier.showNotification(
-            context = context,
-            mode = mode,
-            reason = reason
-        )
+        ReminderNotifier.showNotification(context = context, reason = reason)
     }
 }
