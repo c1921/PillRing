@@ -1,0 +1,113 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+          cache: gradle
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install Android SDK components
+        run: |
+          sdkmanager --install "platform-tools" "platforms;android-36" "build-tools;36.1.0"
+
+      - name: Ensure Gradle wrapper is executable
+        run: chmod +x gradlew
+
+      - name: Validate signing secrets
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          missing=0
+          for key in ANDROID_KEYSTORE_BASE64 ANDROID_KEYSTORE_PASSWORD ANDROID_KEY_ALIAS ANDROID_KEY_PASSWORD; do
+            if [ -z "${!key}" ]; then
+              echo "::error::Missing required secret: ${key}"
+              missing=1
+            fi
+          done
+
+          if [ "$missing" -ne 0 ]; then
+            exit 1
+          fi
+
+      - name: Decode keystore
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+        run: |
+          printf "%s" "$ANDROID_KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/release.keystore"
+
+      - name: Build signed release APK and AAB
+        env:
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          ./gradlew :app:assembleRelease :app:bundleRelease \
+            -Pandroid.injected.signing.store.file="$RUNNER_TEMP/release.keystore" \
+            -Pandroid.injected.signing.store.password="$ANDROID_KEYSTORE_PASSWORD" \
+            -Pandroid.injected.signing.key.alias="$ANDROID_KEY_ALIAS" \
+            -Pandroid.injected.signing.key.password="$ANDROID_KEY_PASSWORD"
+
+      - name: Validate and stage release artifacts
+        env:
+          TAG: ${{ github.ref_name }}
+        run: |
+          APK_PATH="app/build/outputs/apk/release/app-release.apk"
+          AAB_PATH="app/build/outputs/bundle/release/app-release.aab"
+
+          if [ ! -f "$APK_PATH" ]; then
+            echo "::error::Expected APK not found: $APK_PATH"
+            exit 1
+          fi
+
+          if [ ! -f "$AAB_PATH" ]; then
+            echo "::error::Expected AAB not found: $AAB_PATH"
+            exit 1
+          fi
+
+          mkdir -p dist
+          cp "$APK_PATH" "dist/PillRing-${TAG}.apk"
+          cp "$AAB_PATH" "dist/PillRing-${TAG}.aab"
+
+      - name: Generate SHA256 checksums
+        env:
+          TAG: ${{ github.ref_name }}
+        run: |
+          cd dist
+          sha256sum "PillRing-${TAG}.apk" "PillRing-${TAG}.aab" > SHA256SUMS.txt
+
+      - name: Publish GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_name }}
+          generate_release_notes: true
+          overwrite_files: true
+          files: |
+            dist/PillRing-${{ github.ref_name }}.apk
+            dist/PillRing-${{ github.ref_name }}.aab
+            dist/SHA256SUMS.txt
