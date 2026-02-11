@@ -62,7 +62,8 @@ class MainActivityReminderConfirmNavigationTest {
         )
 
         openReminderConfirmFromNotification(planAId)
-        holdConfirmButton(holdDurationMs = 1300L)
+        holdConfirmButton(holdDurationMs = 1300L, waitForIdle = false)
+        composeRule.onNodeWithTag(UiTestTags.REMINDER_CONFIRM_SCREEN).assertIsDisplayed()
 
         var planAActive = true
         var planBActive = false
@@ -77,8 +78,29 @@ class MainActivityReminderConfirmNavigationTest {
 
         assertFalse(planAActive)
         assertTrue(planBActive)
+        waitForConfirmScreenToClose()
         composeRule.onNodeWithTag(UiTestTags.HOME_SETTINGS_BUTTON).assertIsDisplayed()
         composeRule.onAllNodesWithTag(UiTestTags.REMINDER_CONFIRM_SCREEN).assertCountEquals(0)
+    }
+
+    @Test
+    fun confirmSuccess_autoExitsAfterSettleAnimation() {
+        val (planAId) = seedPlans(PlanSeed(name = "Plan A", hour = 8, minute = 0, active = true))
+
+        openReminderConfirmFromNotification(planAId)
+        holdConfirmButton(holdDurationMs = 1300L, waitForIdle = false)
+        composeRule.onNodeWithTag(UiTestTags.REMINDER_CONFIRM_SCREEN).assertIsDisplayed()
+
+        waitForConfirmScreenToClose()
+        composeRule.onNodeWithTag(UiTestTags.HOME_SETTINGS_BUTTON).assertIsDisplayed()
+
+        var planAActive = true
+        composeRule.runOnUiThread {
+            planAActive = ReminderSessionStore.getPlan(composeRule.activity, planAId)
+                ?.isReminderActive
+                ?: true
+        }
+        assertFalse(planAActive)
     }
 
     @Test
@@ -145,13 +167,27 @@ class MainActivityReminderConfirmNavigationTest {
         composeRule.waitForIdle()
     }
 
-    private fun holdConfirmButton(holdDurationMs: Long) {
+    private fun holdConfirmButton(
+        holdDurationMs: Long,
+        waitForIdle: Boolean = true
+    ) {
         composeRule.onNodeWithTag(UiTestTags.REMINDER_CONFIRM_PRIMARY_BUTTON).performTouchInput {
             down(center)
             advanceEventTime(holdDurationMs)
             up()
         }
-        composeRule.waitForIdle()
+        if (waitForIdle) {
+            composeRule.waitForIdle()
+        }
+    }
+
+    private fun waitForConfirmScreenToClose(timeoutMs: Long = 4_000L) {
+        composeRule.waitUntil(timeoutMillis = timeoutMs) {
+            composeRule
+                .onAllNodesWithTag(UiTestTags.REMINDER_CONFIRM_SCREEN)
+                .fetchSemanticsNodes(atLeastOneRootRequired = false)
+                .isEmpty()
+        }
     }
 
     private fun seedPlans(vararg seeds: PlanSeed): List<String> {
