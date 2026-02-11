@@ -27,7 +27,13 @@ class MainActivitySettingsNavigationTest {
 
         composeRule.onNodeWithTag(UiTestTags.SETTINGS_BACK_BUTTON).assertIsDisplayed()
         composeRule.onNodeWithTag(UiTestTags.SETTINGS_LANGUAGE_ITEM).assertIsDisplayed()
+        composeRule
+            .onNodeWithTag(UiTestTags.SETTINGS_LANGUAGE_ICON, useUnmergedTree = true)
+            .assertIsDisplayed()
         composeRule.onNodeWithTag(UiTestTags.SETTINGS_PERMISSION_ITEM).assertIsDisplayed()
+        composeRule
+            .onNodeWithTag(UiTestTags.SETTINGS_PERMISSION_ICON, useUnmergedTree = true)
+            .assertIsDisplayed()
         composeRule.onAllNodesWithTag(UiTestTags.HOME_SETTINGS_BUTTON).assertCountEquals(0)
     }
 
@@ -90,6 +96,12 @@ class MainActivitySettingsNavigationTest {
         composeRule.onNodeWithTag(UiTestTags.HOME_SETTINGS_BUTTON).performClick()
         composeRule.onNodeWithTag(UiTestTags.SETTINGS_BACK_BUTTON).assertIsDisplayed()
         composeRule.onNodeWithTag(UiTestTags.SETTINGS_LANGUAGE_ITEM).assertIsDisplayed()
+        composeRule
+            .onNodeWithTag(UiTestTags.SETTINGS_LANGUAGE_ICON, useUnmergedTree = true)
+            .assertIsDisplayed()
         composeRule.onNodeWithTag(UiTestTags.SETTINGS_PERMISSION_ITEM).assertIsDisplayed()
+        composeRule
+            .onNodeWithTag(UiTestTags.SETTINGS_PERMISSION_ICON, useUnmergedTree = true)
+            .assertIsDisplayed()
     }
 }
