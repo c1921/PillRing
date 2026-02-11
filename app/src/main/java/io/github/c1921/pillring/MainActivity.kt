@@ -26,6 +26,7 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.outlined.Edit
@@ -99,7 +100,9 @@ private const val MAX_PLAN_NAME_LENGTH = 30
 
 private enum class AppScreen {
     HOME,
-    SETTINGS,
+    SETTINGS_OVERVIEW,
+    SETTINGS_LANGUAGE,
+    SETTINGS_PERMISSION,
     REMINDER_CONFIRM
 }
 
@@ -187,8 +190,23 @@ class MainActivity : ComponentActivity() {
 
             PillRingTheme {
                 BackHandler(enabled = currentScreen != AppScreen.HOME) {
-                    reminderConfirmPlanId = null
-                    currentScreen = AppScreen.HOME
+                    when (currentScreen) {
+                        AppScreen.HOME -> Unit
+                        AppScreen.SETTINGS_OVERVIEW -> {
+                            reminderConfirmPlanId = null
+                            currentScreen = AppScreen.HOME
+                        }
+
+                        AppScreen.SETTINGS_LANGUAGE,
+                        AppScreen.SETTINGS_PERMISSION -> {
+                            currentScreen = AppScreen.SETTINGS_OVERVIEW
+                        }
+
+                        AppScreen.REMINDER_CONFIRM -> {
+                            reminderConfirmPlanId = null
+                            currentScreen = AppScreen.HOME
+                        }
+                    }
                 }
 
                 when (currentScreen) {
@@ -241,18 +259,27 @@ class MainActivity : ComponentActivity() {
                             },
                             onOpenSettingsClick = {
                                 permissionItems = buildPermissionItems()
-                                currentScreen = AppScreen.SETTINGS
+                                currentScreen = AppScreen.SETTINGS_OVERVIEW
                             }
                         )
                     }
 
-                    AppScreen.SETTINGS -> {
-                        SettingsScreen(
+                    AppScreen.SETTINGS_OVERVIEW -> {
+                        SettingsOverviewScreen(
                             permissionItems = permissionItems,
                             selectedLanguage = selectedLanguage,
                             effectiveLanguageForSummary = effectiveLanguageForSummary,
                             onBackClick = { currentScreen = AppScreen.HOME },
-                            onOpenPermissionSettings = ::openPermissionSettings,
+                            onLanguageClick = { currentScreen = AppScreen.SETTINGS_LANGUAGE },
+                            onPermissionClick = { currentScreen = AppScreen.SETTINGS_PERMISSION }
+                        )
+                    }
+
+                    AppScreen.SETTINGS_LANGUAGE -> {
+                        LanguageSettingsScreen(
+                            selectedLanguage = selectedLanguage,
+                            effectiveLanguageForSummary = effectiveLanguageForSummary,
+                            onBackClick = { currentScreen = AppScreen.SETTINGS_OVERVIEW },
                             onLanguageSelected = { language ->
                                 val changed = AppLanguageManager.applyLanguage(
                                     context = this@MainActivity,
@@ -268,6 +295,14 @@ class MainActivity : ComponentActivity() {
                                     recreate()
                                 }
                             }
+                        )
+                    }
+
+                    AppScreen.SETTINGS_PERMISSION -> {
+                        PermissionSettingsScreen(
+                            permissionItems = permissionItems,
+                            onBackClick = { currentScreen = AppScreen.SETTINGS_OVERVIEW },
+                            onOpenPermissionSettings = ::openPermissionSettings,
                         )
                     }
 
@@ -1283,14 +1318,20 @@ private fun formatReminderTime(
 
 @Composable
 @OptIn(ExperimentalMaterial3Api::class)
-private fun SettingsScreen(
+private fun SettingsOverviewScreen(
     permissionItems: List<PermissionHealthItem>,
     selectedLanguage: AppLanguage,
     effectiveLanguageForSummary: AppLanguage,
     onBackClick: () -> Unit,
-    onOpenPermissionSettings: (PermissionAction) -> Unit,
-    onLanguageSelected: (AppLanguage) -> Unit
+    onLanguageClick: () -> Unit,
+    onPermissionClick: () -> Unit
 ) {
+    val languageSummary = languageSummaryText(
+        selectedLanguage = selectedLanguage,
+        effectiveLanguageForSummary = effectiveLanguageForSummary
+    )
+    val permissionSummary = permissionOverviewSummary(permissionItems)
+
     Scaffold(
         modifier = Modifier.fillMaxSize(),
         topBar = {
@@ -1324,27 +1365,214 @@ private fun SettingsScreen(
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             item {
+                SettingsOverviewItem(
+                    title = stringResource(R.string.settings_language_title),
+                    summary = languageSummary,
+                    testTag = UiTestTags.SETTINGS_LANGUAGE_ITEM,
+                    onClick = onLanguageClick
+                )
+            }
+            item {
+                SettingsOverviewItem(
+                    title = stringResource(R.string.permission_health_title),
+                    summary = permissionSummary,
+                    testTag = UiTestTags.SETTINGS_PERMISSION_ITEM,
+                    onClick = onPermissionClick
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun SettingsOverviewItem(
+    title: String,
+    summary: String,
+    testTag: String,
+    onClick: () -> Unit
+) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .testTag(testTag)
+            .clickable(onClick = onClick),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceContainerHigh
+        )
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.titleMedium
+                )
+                Text(
+                    text = summary,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+            Icon(
+                imageVector = Icons.AutoMirrored.Filled.ArrowForward,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+    }
+}
+
+@Composable
+@OptIn(ExperimentalMaterial3Api::class)
+private fun LanguageSettingsScreen(
+    selectedLanguage: AppLanguage,
+    effectiveLanguageForSummary: AppLanguage,
+    onBackClick: () -> Unit,
+    onLanguageSelected: (AppLanguage) -> Unit
+) {
+    val summary = languageSummaryText(
+        selectedLanguage = selectedLanguage,
+        effectiveLanguageForSummary = effectiveLanguageForSummary
+    )
+
+    Scaffold(
+        modifier = Modifier.fillMaxSize(),
+        topBar = {
+            TopAppBar(
+                title = {
+                    Text(
+                        text = stringResource(R.string.settings_language_title),
+                        style = MaterialTheme.typography.titleLarge
+                    )
+                },
+                navigationIcon = {
+                    IconButton(
+                        onClick = onBackClick,
+                        modifier = Modifier.testTag(UiTestTags.SETTINGS_BACK_BUTTON)
+                    ) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = stringResource(R.string.cd_navigate_back)
+                        )
+                    }
+                }
+            )
+        }
+    ) { innerPadding ->
+        LazyColumn(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(innerPadding)
+                .padding(horizontal = 16.dp),
+            contentPadding = PaddingValues(top = 16.dp, bottom = 24.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            item {
                 Card(
                     modifier = Modifier.fillMaxWidth(),
                     colors = CardDefaults.cardColors(
                         containerColor = MaterialTheme.colorScheme.surfaceContainerHigh
                     )
                 ) {
-                    Text(
-                        text = stringResource(R.string.settings_page_description),
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.padding(16.dp)
-                    )
+                    Column(
+                        modifier = Modifier.padding(16.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Text(
+                            text = stringResource(R.string.settings_language_dialog_title),
+                            style = MaterialTheme.typography.titleMedium
+                        )
+                        Text(
+                            text = summary,
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
                 }
             }
             item {
-                LanguageSettingsCard(
-                    selectedLanguage = selectedLanguage,
-                    effectiveLanguageForSummary = effectiveLanguageForSummary,
-                    onLanguageSelected = onLanguageSelected
-                )
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.surfaceContainerHigh
+                    )
+                ) {
+                    Column(
+                        modifier = Modifier.padding(16.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        LanguageOptionRow(
+                            text = stringResource(R.string.settings_language_option_system),
+                            selected = selectedLanguage == AppLanguage.SYSTEM,
+                            testTag = UiTestTags.SETTINGS_LANGUAGE_OPTION_SYSTEM,
+                            onClick = { onLanguageSelected(AppLanguage.SYSTEM) }
+                        )
+                        LanguageOptionRow(
+                            text = stringResource(R.string.settings_language_option_english),
+                            selected = selectedLanguage == AppLanguage.ENGLISH,
+                            testTag = UiTestTags.SETTINGS_LANGUAGE_OPTION_ENGLISH,
+                            onClick = { onLanguageSelected(AppLanguage.ENGLISH) }
+                        )
+                        LanguageOptionRow(
+                            text = stringResource(R.string.settings_language_option_chinese),
+                            selected = selectedLanguage == AppLanguage.CHINESE_SIMPLIFIED,
+                            testTag = UiTestTags.SETTINGS_LANGUAGE_OPTION_CHINESE,
+                            onClick = { onLanguageSelected(AppLanguage.CHINESE_SIMPLIFIED) }
+                        )
+                    }
+                }
             }
+        }
+    }
+}
+
+@Composable
+@OptIn(ExperimentalMaterial3Api::class)
+private fun PermissionSettingsScreen(
+    permissionItems: List<PermissionHealthItem>,
+    onBackClick: () -> Unit,
+    onOpenPermissionSettings: (PermissionAction) -> Unit
+) {
+    Scaffold(
+        modifier = Modifier
+            .fillMaxSize()
+            .testTag(UiTestTags.SETTINGS_PERMISSION_PAGE),
+        topBar = {
+            TopAppBar(
+                title = {
+                    Text(
+                        text = stringResource(R.string.permission_health_title),
+                        style = MaterialTheme.typography.titleLarge
+                    )
+                },
+                navigationIcon = {
+                    IconButton(
+                        onClick = onBackClick,
+                        modifier = Modifier.testTag(UiTestTags.SETTINGS_BACK_BUTTON)
+                    ) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = stringResource(R.string.cd_navigate_back)
+                        )
+                    }
+                }
+            )
+        }
+    ) { innerPadding ->
+        LazyColumn(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(innerPadding)
+                .padding(horizontal = 16.dp),
+            contentPadding = PaddingValues(top = 16.dp, bottom = 24.dp)
+        ) {
             item {
                 PermissionHealthPanel(
                     items = permissionItems,
@@ -1356,94 +1584,24 @@ private fun SettingsScreen(
 }
 
 @Composable
-private fun LanguageSettingsCard(
-    selectedLanguage: AppLanguage,
-    effectiveLanguageForSummary: AppLanguage,
-    onLanguageSelected: (AppLanguage) -> Unit
-) {
-    var showDialog by rememberSaveable {
-        mutableStateOf(false)
-    }
-    val summaryText = languageSummaryText(
-        selectedLanguage = selectedLanguage,
-        effectiveLanguageForSummary = effectiveLanguageForSummary
-    )
-
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .testTag(UiTestTags.SETTINGS_LANGUAGE_ITEM)
-            .clickable { showDialog = true },
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceContainerHigh
-        )
-    ) {
-        Column(
-            modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            Text(
-                text = stringResource(R.string.settings_language_title),
-                style = MaterialTheme.typography.titleMedium
-            )
-            Text(
-                text = summaryText,
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-        }
-    }
-
-    if (showDialog) {
-        AlertDialog(
-            onDismissRequest = { showDialog = false },
-            title = {
-                Text(text = stringResource(R.string.settings_language_dialog_title))
-            },
-            text = {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .testTag(UiTestTags.SETTINGS_LANGUAGE_DIALOG),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    LanguageOptionRow(
-                        text = stringResource(R.string.settings_language_option_system),
-                        selected = selectedLanguage == AppLanguage.SYSTEM,
-                        testTag = UiTestTags.SETTINGS_LANGUAGE_OPTION_SYSTEM,
-                        onClick = {
-                            onLanguageSelected(AppLanguage.SYSTEM)
-                            showDialog = false
-                        }
-                    )
-                    LanguageOptionRow(
-                        text = stringResource(R.string.settings_language_option_english),
-                        selected = selectedLanguage == AppLanguage.ENGLISH,
-                        testTag = UiTestTags.SETTINGS_LANGUAGE_OPTION_ENGLISH,
-                        onClick = {
-                            onLanguageSelected(AppLanguage.ENGLISH)
-                            showDialog = false
-                        }
-                    )
-                    LanguageOptionRow(
-                        text = stringResource(R.string.settings_language_option_chinese),
-                        selected = selectedLanguage == AppLanguage.CHINESE_SIMPLIFIED,
-                        testTag = UiTestTags.SETTINGS_LANGUAGE_OPTION_CHINESE,
-                        onClick = {
-                            onLanguageSelected(AppLanguage.CHINESE_SIMPLIFIED)
-                            showDialog = false
-                        }
-                    )
-                }
-            },
-            confirmButton = {},
-            dismissButton = {
-                TextButton(onClick = { showDialog = false }) {
-                    Text(text = stringResource(R.string.dialog_btn_cancel))
-                }
-            }
+private fun permissionOverviewSummary(items: List<PermissionHealthItem>): String {
+    val needsActionCount = items.count { it.state == PermissionState.NEEDS_ACTION }
+    if (needsActionCount > 0) {
+        return stringResource(
+            R.string.settings_permission_summary_needs_action,
+            needsActionCount
         )
     }
+
+    val manualCheckCount = items.count { it.state == PermissionState.MANUAL_CHECK }
+    if (manualCheckCount > 0) {
+        return stringResource(
+            R.string.settings_permission_summary_manual_check,
+            manualCheckCount
+        )
+    }
+
+    return stringResource(R.string.settings_permission_summary_all_ok)
 }
 
 @Composable
@@ -1632,9 +1790,9 @@ private fun ReminderHomeScreenPreview() {
 
 @Preview(showBackground = true)
 @Composable
-private fun SettingsScreenPreview() {
+private fun SettingsOverviewScreenPreview() {
     PillRingTheme {
-        SettingsScreen(
+        SettingsOverviewScreen(
             permissionItems = listOf(
                 PermissionHealthItem(
                     id = "notification",
@@ -1649,8 +1807,43 @@ private fun SettingsScreenPreview() {
             selectedLanguage = AppLanguage.SYSTEM,
             effectiveLanguageForSummary = AppLanguage.ENGLISH,
             onBackClick = {},
-            onOpenPermissionSettings = {},
+            onLanguageClick = {},
+            onPermissionClick = {}
+        )
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+private fun LanguageSettingsScreenPreview() {
+    PillRingTheme {
+        LanguageSettingsScreen(
+            selectedLanguage = AppLanguage.SYSTEM,
+            effectiveLanguageForSummary = AppLanguage.ENGLISH,
+            onBackClick = {},
             onLanguageSelected = {}
+        )
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+private fun PermissionSettingsScreenPreview() {
+    PillRingTheme {
+        PermissionSettingsScreen(
+            permissionItems = listOf(
+                PermissionHealthItem(
+                    id = "notification",
+                    title = "Notification permission",
+                    statusText = "Needs action",
+                    detailText = "Allow notifications to receive reminder popups.",
+                    state = PermissionState.NEEDS_ACTION,
+                    actionLabel = "Open settings",
+                    action = PermissionAction.OPEN_NOTIFICATION_SETTINGS
+                )
+            ),
+            onBackClick = {},
+            onOpenPermissionSettings = {}
         )
     }
 }

@@ -84,6 +84,9 @@
     <string name="settings_language_summary_chinese">Simplified Chinese</string>
     <string name="settings_language_effective_english">English</string>
     <string name="settings_language_effective_chinese">中文</string>
+    <string name="settings_permission_summary_all_ok">All permission checks are healthy</string>
+    <string name="settings_permission_summary_needs_action">%1$d item(s) need action</string>
+    <string name="settings_permission_summary_manual_check">%1$d item(s) need manual check</string>
 
     <string name="permission_health_title">Permission Health</string>
     <string name="permission_health_description">Check reminder-related permissions and open system settings when needed.</string>

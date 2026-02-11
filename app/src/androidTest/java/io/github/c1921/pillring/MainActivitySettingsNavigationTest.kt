@@ -22,15 +22,17 @@ class MainActivitySettingsNavigationTest {
     val composeRule = createAndroidComposeRule<MainActivity>()
 
     @Test
-    fun openSettingsButton_navigatesToSettingsScreen() {
+    fun openSettingsButton_navigatesToSettingsOverview() {
         composeRule.onNodeWithTag(UiTestTags.HOME_SETTINGS_BUTTON).performClick()
 
         composeRule.onNodeWithTag(UiTestTags.SETTINGS_BACK_BUTTON).assertIsDisplayed()
+        composeRule.onNodeWithTag(UiTestTags.SETTINGS_LANGUAGE_ITEM).assertIsDisplayed()
+        composeRule.onNodeWithTag(UiTestTags.SETTINGS_PERMISSION_ITEM).assertIsDisplayed()
         composeRule.onAllNodesWithTag(UiTestTags.HOME_SETTINGS_BUTTON).assertCountEquals(0)
     }
 
     @Test
-    fun settingsBackIcon_navigatesToHomeScreen() {
+    fun settingsBackIcon_onOverview_navigatesToHomeScreen() {
         composeRule.onNodeWithTag(UiTestTags.HOME_SETTINGS_BUTTON).performClick()
         composeRule.onNodeWithTag(UiTestTags.SETTINGS_BACK_BUTTON).performClick()
 
@@ -39,11 +41,55 @@ class MainActivitySettingsNavigationTest {
     }
 
     @Test
-    fun systemBack_navigatesToHomeScreen() {
+    fun systemBack_onOverview_navigatesToHomeScreen() {
         composeRule.onNodeWithTag(UiTestTags.HOME_SETTINGS_BUTTON).performClick()
         pressBack()
 
         composeRule.onNodeWithTag(UiTestTags.HOME_SETTINGS_BUTTON).assertIsDisplayed()
         composeRule.onAllNodesWithTag(UiTestTags.SETTINGS_BACK_BUTTON).assertCountEquals(0)
+    }
+
+    @Test
+    fun tapLanguageEntry_navigatesToLanguageSubpage() {
+        openSettingsOverview()
+        composeRule.onNodeWithTag(UiTestTags.SETTINGS_LANGUAGE_ITEM).performClick()
+
+        composeRule.onNodeWithTag(UiTestTags.SETTINGS_LANGUAGE_OPTION_SYSTEM).assertIsDisplayed()
+    }
+
+    @Test
+    fun tapPermissionEntry_navigatesToPermissionSubpage() {
+        openSettingsOverview()
+        composeRule.onNodeWithTag(UiTestTags.SETTINGS_PERMISSION_ITEM).performClick()
+
+        composeRule.onNodeWithTag(UiTestTags.SETTINGS_PERMISSION_PAGE).assertIsDisplayed()
+    }
+
+    @Test
+    fun backFromLanguageSubpage_returnsToSettingsOverview() {
+        openSettingsOverview()
+        composeRule.onNodeWithTag(UiTestTags.SETTINGS_LANGUAGE_ITEM).performClick()
+        composeRule.onNodeWithTag(UiTestTags.SETTINGS_BACK_BUTTON).performClick()
+
+        composeRule.onNodeWithTag(UiTestTags.SETTINGS_LANGUAGE_ITEM).assertIsDisplayed()
+        composeRule.onNodeWithTag(UiTestTags.SETTINGS_PERMISSION_ITEM).assertIsDisplayed()
+    }
+
+    @Test
+    fun systemBackFromPermissionSubpage_returnsToSettingsOverview() {
+        openSettingsOverview()
+        composeRule.onNodeWithTag(UiTestTags.SETTINGS_PERMISSION_ITEM).performClick()
+        pressBack()
+
+        composeRule.onNodeWithTag(UiTestTags.SETTINGS_LANGUAGE_ITEM).assertIsDisplayed()
+        composeRule.onNodeWithTag(UiTestTags.SETTINGS_PERMISSION_ITEM).assertIsDisplayed()
+        composeRule.onAllNodesWithTag(UiTestTags.SETTINGS_PERMISSION_PAGE).assertCountEquals(0)
+    }
+
+    private fun openSettingsOverview() {
+        composeRule.onNodeWithTag(UiTestTags.HOME_SETTINGS_BUTTON).performClick()
+        composeRule.onNodeWithTag(UiTestTags.SETTINGS_BACK_BUTTON).assertIsDisplayed()
+        composeRule.onNodeWithTag(UiTestTags.SETTINGS_LANGUAGE_ITEM).assertIsDisplayed()
+        composeRule.onNodeWithTag(UiTestTags.SETTINGS_PERMISSION_ITEM).assertIsDisplayed()
     }
 }

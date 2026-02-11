@@ -8,7 +8,6 @@ import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onNodeWithTag
-import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.test.rule.GrantPermissionRule
 import io.github.c1921.pillring.locale.AppLanguage
@@ -43,44 +42,41 @@ class MainActivityLanguageSettingsTest {
 
     @Test
     fun settings_containsLanguageItem() {
-        openSettings()
+        openSettingsOverview()
 
         composeRule.onNodeWithTag(UiTestTags.SETTINGS_LANGUAGE_ITEM).assertIsDisplayed()
     }
 
     @Test
     fun selectChinese_updatesUiText() {
-        openSettings()
         selectLanguage(UiTestTags.SETTINGS_LANGUAGE_OPTION_CHINESE)
 
-        composeRule.onNodeWithText(string(R.string.settings_page_title)).assertIsDisplayed()
+        composeRule.onNodeWithTag(UiTestTags.SETTINGS_LANGUAGE_OPTION_SYSTEM).assertIsDisplayed()
         assertEquals(AppLanguage.CHINESE_SIMPLIFIED, selectedLanguage())
     }
 
     @Test
     fun selectEnglish_updatesUiText() {
-        openSettings()
         selectLanguage(UiTestTags.SETTINGS_LANGUAGE_OPTION_CHINESE)
         selectLanguage(UiTestTags.SETTINGS_LANGUAGE_OPTION_ENGLISH)
 
-        composeRule.onNodeWithText(string(R.string.settings_page_title)).assertIsDisplayed()
+        composeRule.onNodeWithTag(UiTestTags.SETTINGS_LANGUAGE_OPTION_SYSTEM).assertIsDisplayed()
         assertEquals(AppLanguage.ENGLISH, selectedLanguage())
     }
 
     @Test
     fun languageSelection_persistsAfterRecreate() {
-        openSettings()
         selectLanguage(UiTestTags.SETTINGS_LANGUAGE_OPTION_CHINESE)
 
         composeRule.activityRule.scenario.recreate()
         composeRule.waitForIdle()
 
+        openLanguageSettings()
         assertEquals(AppLanguage.CHINESE_SIMPLIFIED, selectedLanguage())
     }
 
     @Test
     fun followSystem_setsEmptyApplicationLocales() {
-        openSettings()
         selectLanguage(UiTestTags.SETTINGS_LANGUAGE_OPTION_ENGLISH)
         selectLanguage(UiTestTags.SETTINGS_LANGUAGE_OPTION_SYSTEM)
 
@@ -89,32 +85,43 @@ class MainActivityLanguageSettingsTest {
         assertEquals(AppLanguage.SYSTEM, selectedLanguage())
     }
 
-    private fun openSettings() {
-        val alreadyInSettings = composeRule
+    private fun openSettingsOverview() {
+        val alreadyInOverview = composeRule
             .onAllNodesWithTag(UiTestTags.SETTINGS_BACK_BUTTON)
             .fetchSemanticsNodes()
             .isNotEmpty()
-        if (!alreadyInSettings) {
+            && composeRule
+                .onAllNodesWithTag(UiTestTags.SETTINGS_LANGUAGE_ITEM)
+                .fetchSemanticsNodes()
+                .isNotEmpty()
+        if (!alreadyInOverview) {
             composeRule.onNodeWithTag(UiTestTags.HOME_SETTINGS_BUTTON).performClick()
         }
         composeRule.onNodeWithTag(UiTestTags.SETTINGS_BACK_BUTTON).assertIsDisplayed()
+        composeRule.onNodeWithTag(UiTestTags.SETTINGS_LANGUAGE_ITEM).assertIsDisplayed()
+    }
+
+    private fun openLanguageSettings() {
+        val alreadyInLanguageSettings = composeRule
+            .onAllNodesWithTag(UiTestTags.SETTINGS_LANGUAGE_OPTION_SYSTEM)
+            .fetchSemanticsNodes()
+            .isNotEmpty()
+        if (!alreadyInLanguageSettings) {
+            openSettingsOverview()
+            composeRule.onNodeWithTag(UiTestTags.SETTINGS_LANGUAGE_ITEM).performClick()
+        }
+        composeRule.onNodeWithTag(UiTestTags.SETTINGS_LANGUAGE_OPTION_SYSTEM).assertIsDisplayed()
     }
 
     private fun selectLanguage(optionTag: String) {
-        openSettings()
-        composeRule.onNodeWithTag(UiTestTags.SETTINGS_LANGUAGE_ITEM).performClick()
-        composeRule.onNodeWithTag(UiTestTags.SETTINGS_LANGUAGE_DIALOG).assertIsDisplayed()
+        openLanguageSettings()
         composeRule.onNodeWithTag(optionTag).performClick()
         composeRule.waitForIdle()
-        openSettings()
+        openLanguageSettings()
     }
 
     private fun selectedLanguage(): AppLanguage {
         return AppLanguageManager.getSelectedLanguage(composeRule.activity)
-    }
-
-    private fun string(resId: Int): String {
-        return composeRule.activity.getString(resId)
     }
 
     private fun clearPlanStore() {
