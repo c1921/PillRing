@@ -54,6 +54,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.outlined.Edit
+import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.outlined.Language
 import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material.icons.outlined.VerifiedUser
@@ -152,6 +153,7 @@ private enum class AppScreen {
     SETTINGS_OVERVIEW,
     SETTINGS_LANGUAGE,
     SETTINGS_PERMISSION,
+    SETTINGS_ABOUT,
     REMINDER_CONFIRM
 }
 
@@ -254,7 +256,8 @@ class MainActivity : ComponentActivity() {
                         }
 
                         AppScreen.SETTINGS_LANGUAGE,
-                        AppScreen.SETTINGS_PERMISSION -> {
+                        AppScreen.SETTINGS_PERMISSION,
+                        AppScreen.SETTINGS_ABOUT -> {
                             currentScreen = AppScreen.SETTINGS_OVERVIEW
                         }
 
@@ -338,9 +341,11 @@ class MainActivity : ComponentActivity() {
                             permissionItems = permissionItems,
                             selectedLanguage = selectedLanguage,
                             effectiveLanguageForSummary = effectiveLanguageForSummary,
+                            appVersionName = BuildConfig.VERSION_NAME,
                             onBackClick = { currentScreen = AppScreen.HOME },
                             onLanguageClick = { currentScreen = AppScreen.SETTINGS_LANGUAGE },
-                            onPermissionClick = { currentScreen = AppScreen.SETTINGS_PERMISSION }
+                            onPermissionClick = { currentScreen = AppScreen.SETTINGS_PERMISSION },
+                            onAboutClick = { currentScreen = AppScreen.SETTINGS_ABOUT }
                         )
                     }
 
@@ -372,6 +377,13 @@ class MainActivity : ComponentActivity() {
                             permissionItems = permissionItems,
                             onBackClick = { currentScreen = AppScreen.SETTINGS_OVERVIEW },
                             onOpenPermissionSettings = ::openPermissionSettings,
+                        )
+                    }
+
+                    AppScreen.SETTINGS_ABOUT -> {
+                        AboutSettingsScreen(
+                            appVersionName = BuildConfig.VERSION_NAME,
+                            onBackClick = { currentScreen = AppScreen.SETTINGS_OVERVIEW }
                         )
                     }
 
@@ -1783,15 +1795,21 @@ private fun SettingsOverviewScreen(
     permissionItems: List<PermissionHealthItem>,
     selectedLanguage: AppLanguage,
     effectiveLanguageForSummary: AppLanguage,
+    appVersionName: String,
     onBackClick: () -> Unit,
     onLanguageClick: () -> Unit,
-    onPermissionClick: () -> Unit
+    onPermissionClick: () -> Unit,
+    onAboutClick: () -> Unit
 ) {
     val languageSummary = languageSummaryText(
         selectedLanguage = selectedLanguage,
         effectiveLanguageForSummary = effectiveLanguageForSummary
     )
     val permissionSummary = permissionOverviewSummary(permissionItems)
+    val aboutVersionName = appVersionName.ifBlank {
+        stringResource(R.string.settings_about_version_unknown)
+    }
+    val aboutSummary = stringResource(R.string.settings_about_summary, aboutVersionName)
 
     Scaffold(
         modifier = Modifier.fillMaxSize(),
@@ -1845,6 +1863,16 @@ private fun SettingsOverviewScreen(
                     onClick = onPermissionClick
                 )
             }
+            item {
+                SettingsOverviewItem(
+                    title = stringResource(R.string.settings_about_title),
+                    summary = aboutSummary,
+                    icon = Icons.Outlined.Info,
+                    testTag = UiTestTags.SETTINGS_ABOUT_ITEM,
+                    iconTestTag = UiTestTags.SETTINGS_ABOUT_ICON,
+                    onClick = onAboutClick
+                )
+            }
         }
     }
 }
@@ -1893,6 +1921,78 @@ private fun SettingsOverviewItem(
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
+            }
+        }
+    }
+}
+
+@Composable
+@OptIn(ExperimentalMaterial3Api::class)
+private fun AboutSettingsScreen(
+    appVersionName: String,
+    onBackClick: () -> Unit
+) {
+    val aboutVersionName = appVersionName.ifBlank {
+        stringResource(R.string.settings_about_version_unknown)
+    }
+
+    Scaffold(
+        modifier = Modifier
+            .fillMaxSize()
+            .testTag(UiTestTags.SETTINGS_ABOUT_PAGE),
+        topBar = {
+            TopAppBar(
+                title = {
+                    Text(
+                        text = stringResource(R.string.settings_about_title),
+                        style = MaterialTheme.typography.titleLarge
+                    )
+                },
+                navigationIcon = {
+                    IconButton(
+                        onClick = onBackClick,
+                        modifier = Modifier.testTag(UiTestTags.SETTINGS_BACK_BUTTON)
+                    ) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = stringResource(R.string.cd_navigate_back)
+                        )
+                    }
+                }
+            )
+        }
+    ) { innerPadding ->
+        LazyColumn(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(innerPadding)
+                .padding(horizontal = 16.dp),
+            contentPadding = PaddingValues(top = 16.dp, bottom = 24.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            item {
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.surfaceContainerHigh
+                    )
+                ) {
+                    Column(
+                        modifier = Modifier.padding(16.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Text(
+                            text = stringResource(R.string.settings_about_version_label),
+                            style = MaterialTheme.typography.titleMedium
+                        )
+                        Text(
+                            text = aboutVersionName,
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.testTag(UiTestTags.SETTINGS_ABOUT_VERSION_VALUE)
+                        )
+                    }
+                }
             }
         }
     }
@@ -2276,9 +2376,22 @@ private fun SettingsOverviewScreenPreview() {
             ),
             selectedLanguage = AppLanguage.SYSTEM,
             effectiveLanguageForSummary = AppLanguage.ENGLISH,
+            appVersionName = "1.0",
             onBackClick = {},
             onLanguageClick = {},
-            onPermissionClick = {}
+            onPermissionClick = {},
+            onAboutClick = {}
+        )
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+private fun AboutSettingsScreenPreview() {
+    PillRingTheme {
+        AboutSettingsScreen(
+            appVersionName = "1.0",
+            onBackClick = {}
         )
     }
 }

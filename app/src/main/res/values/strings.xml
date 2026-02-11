@@ -79,6 +79,10 @@
     <string name="settings_language_summary_chinese">Simplified Chinese</string>
     <string name="settings_language_effective_english">English</string>
     <string name="settings_language_effective_chinese">中文</string>
+    <string name="settings_about_title">About</string>
+    <string name="settings_about_summary">Version %1$s</string>
+    <string name="settings_about_version_label">Version</string>
+    <string name="settings_about_version_unknown">Unknown version</string>
     <string name="settings_permission_summary_all_ok">All permission checks are healthy</string>
     <string name="settings_permission_summary_needs_action">%1$d item(s) need action</string>
     <string name="settings_permission_summary_manual_check">%1$d item(s) need manual check</string>

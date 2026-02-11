@@ -79,6 +79,10 @@
     <string name="settings_language_summary_chinese">简体中文</string>
     <string name="settings_language_effective_english">English</string>
     <string name="settings_language_effective_chinese">中文</string>
+    <string name="settings_about_title">关于</string>
+    <string name="settings_about_summary">版本 %1$s</string>
+    <string name="settings_about_version_label">版本</string>
+    <string name="settings_about_version_unknown">未知版本</string>
     <string name="settings_permission_summary_all_ok">全部权限项正常</string>
     <string name="settings_permission_summary_needs_action">%1$d 项需处理</string>
     <string name="settings_permission_summary_manual_check">%1$d 项需手动检查</string>

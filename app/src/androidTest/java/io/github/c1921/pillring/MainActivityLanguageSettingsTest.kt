@@ -99,6 +99,7 @@ class MainActivityLanguageSettingsTest {
         }
         composeRule.onNodeWithTag(UiTestTags.SETTINGS_BACK_BUTTON).assertIsDisplayed()
         composeRule.onNodeWithTag(UiTestTags.SETTINGS_LANGUAGE_ITEM).assertIsDisplayed()
+        composeRule.onNodeWithTag(UiTestTags.SETTINGS_ABOUT_ITEM).assertIsDisplayed()
     }
 
     private fun openLanguageSettings() {

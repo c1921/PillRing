@@ -3,6 +3,25 @@ plugins {
     alias(libs.plugins.kotlin.compose)
 }
 
+fun readGitTagVersion(): String? {
+    return try {
+        val process = ProcessBuilder("git", "describe", "--tags", "--exact-match")
+            .redirectErrorStream(true)
+            .start()
+        val output = process.inputStream.bufferedReader().use { it.readText() }.trim()
+        val exitCode = process.waitFor()
+        if (exitCode != 0) {
+            null
+        } else {
+            output.removePrefix("v").ifBlank { null }
+        }
+    } catch (_: Exception) {
+        null
+    }
+}
+
+val resolvedVersionName = readGitTagVersion() ?: "0.1.0"
+
 android {
     namespace = "io.github.c1921.pillring"
     compileSdk {
@@ -14,7 +33,7 @@ android {
         minSdk = 35
         targetSdk = 36
         versionCode = 1
-        versionName = "1.0"
+        versionName = resolvedVersionName
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -34,6 +53,7 @@ android {
     }
     buildFeatures {
         compose = true
+        buildConfig = true
     }
 }
 

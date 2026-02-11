@@ -34,6 +34,10 @@ class MainActivitySettingsNavigationTest {
         composeRule
             .onNodeWithTag(UiTestTags.SETTINGS_PERMISSION_ICON, useUnmergedTree = true)
             .assertIsDisplayed()
+        composeRule.onNodeWithTag(UiTestTags.SETTINGS_ABOUT_ITEM).assertIsDisplayed()
+        composeRule
+            .onNodeWithTag(UiTestTags.SETTINGS_ABOUT_ICON, useUnmergedTree = true)
+            .assertIsDisplayed()
         composeRule.onAllNodesWithTag(UiTestTags.HOME_SETTINGS_BUTTON).assertCountEquals(0)
     }
 
@@ -72,6 +76,15 @@ class MainActivitySettingsNavigationTest {
     }
 
     @Test
+    fun tapAboutEntry_navigatesToAboutSubpage() {
+        openSettingsOverview()
+        composeRule.onNodeWithTag(UiTestTags.SETTINGS_ABOUT_ITEM).performClick()
+
+        composeRule.onNodeWithTag(UiTestTags.SETTINGS_ABOUT_PAGE).assertIsDisplayed()
+        composeRule.onNodeWithTag(UiTestTags.SETTINGS_ABOUT_VERSION_VALUE).assertIsDisplayed()
+    }
+
+    @Test
     fun backFromLanguageSubpage_returnsToSettingsOverview() {
         openSettingsOverview()
         composeRule.onNodeWithTag(UiTestTags.SETTINGS_LANGUAGE_ITEM).performClick()
@@ -79,6 +92,7 @@ class MainActivitySettingsNavigationTest {
 
         composeRule.onNodeWithTag(UiTestTags.SETTINGS_LANGUAGE_ITEM).assertIsDisplayed()
         composeRule.onNodeWithTag(UiTestTags.SETTINGS_PERMISSION_ITEM).assertIsDisplayed()
+        composeRule.onNodeWithTag(UiTestTags.SETTINGS_ABOUT_ITEM).assertIsDisplayed()
     }
 
     @Test
@@ -89,7 +103,31 @@ class MainActivitySettingsNavigationTest {
 
         composeRule.onNodeWithTag(UiTestTags.SETTINGS_LANGUAGE_ITEM).assertIsDisplayed()
         composeRule.onNodeWithTag(UiTestTags.SETTINGS_PERMISSION_ITEM).assertIsDisplayed()
+        composeRule.onNodeWithTag(UiTestTags.SETTINGS_ABOUT_ITEM).assertIsDisplayed()
         composeRule.onAllNodesWithTag(UiTestTags.SETTINGS_PERMISSION_PAGE).assertCountEquals(0)
+    }
+
+    @Test
+    fun backFromAboutSubpage_returnsToSettingsOverview() {
+        openSettingsOverview()
+        composeRule.onNodeWithTag(UiTestTags.SETTINGS_ABOUT_ITEM).performClick()
+        composeRule.onNodeWithTag(UiTestTags.SETTINGS_BACK_BUTTON).performClick()
+
+        composeRule.onNodeWithTag(UiTestTags.SETTINGS_LANGUAGE_ITEM).assertIsDisplayed()
+        composeRule.onNodeWithTag(UiTestTags.SETTINGS_PERMISSION_ITEM).assertIsDisplayed()
+        composeRule.onNodeWithTag(UiTestTags.SETTINGS_ABOUT_ITEM).assertIsDisplayed()
+    }
+
+    @Test
+    fun systemBackFromAboutSubpage_returnsToSettingsOverview() {
+        openSettingsOverview()
+        composeRule.onNodeWithTag(UiTestTags.SETTINGS_ABOUT_ITEM).performClick()
+        pressBack()
+
+        composeRule.onNodeWithTag(UiTestTags.SETTINGS_LANGUAGE_ITEM).assertIsDisplayed()
+        composeRule.onNodeWithTag(UiTestTags.SETTINGS_PERMISSION_ITEM).assertIsDisplayed()
+        composeRule.onNodeWithTag(UiTestTags.SETTINGS_ABOUT_ITEM).assertIsDisplayed()
+        composeRule.onAllNodesWithTag(UiTestTags.SETTINGS_ABOUT_PAGE).assertCountEquals(0)
     }
 
     private fun openSettingsOverview() {
@@ -102,6 +140,10 @@ class MainActivitySettingsNavigationTest {
         composeRule.onNodeWithTag(UiTestTags.SETTINGS_PERMISSION_ITEM).assertIsDisplayed()
         composeRule
             .onNodeWithTag(UiTestTags.SETTINGS_PERMISSION_ICON, useUnmergedTree = true)
+            .assertIsDisplayed()
+        composeRule.onNodeWithTag(UiTestTags.SETTINGS_ABOUT_ITEM).assertIsDisplayed()
+        composeRule
+            .onNodeWithTag(UiTestTags.SETTINGS_ABOUT_ICON, useUnmergedTree = true)
             .assertIsDisplayed()
     }
 }
