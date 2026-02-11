@@ -11,7 +11,7 @@ import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
-import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performTouchInput
 import androidx.test.rule.GrantPermissionRule
 import io.github.c1921.pillring.notification.ReminderContract
 import io.github.c1921.pillring.notification.ReminderSessionStore
@@ -62,7 +62,7 @@ class MainActivityReminderConfirmNavigationTest {
         )
 
         openReminderConfirmFromNotification(planAId)
-        composeRule.onNodeWithTag(UiTestTags.REMINDER_CONFIRM_PRIMARY_BUTTON).performClick()
+        holdConfirmButton(holdDurationMs = 1300L)
 
         var planAActive = true
         var planBActive = false
@@ -79,6 +79,24 @@ class MainActivityReminderConfirmNavigationTest {
         assertTrue(planBActive)
         composeRule.onNodeWithTag(UiTestTags.HOME_SETTINGS_BUTTON).assertIsDisplayed()
         composeRule.onAllNodesWithTag(UiTestTags.REMINDER_CONFIRM_SCREEN).assertCountEquals(0)
+    }
+
+    @Test
+    fun shortHold_doesNotStopTargetPlanReminder() {
+        val (planAId) = seedPlans(PlanSeed(name = "Plan A", hour = 8, minute = 0, active = true))
+
+        openReminderConfirmFromNotification(planAId)
+        holdConfirmButton(holdDurationMs = 600L)
+
+        var planAActive = false
+        composeRule.runOnUiThread {
+            planAActive = ReminderSessionStore.getPlan(composeRule.activity, planAId)
+                ?.isReminderActive
+                ?: false
+        }
+
+        assertTrue(planAActive)
+        composeRule.onNodeWithTag(UiTestTags.REMINDER_CONFIRM_SCREEN).assertIsDisplayed()
     }
 
     @Test
@@ -123,6 +141,15 @@ class MainActivityReminderConfirmNavigationTest {
                     putExtra(ReminderContract.EXTRA_PLAN_ID, planId)
                 }
             )
+        }
+        composeRule.waitForIdle()
+    }
+
+    private fun holdConfirmButton(holdDurationMs: Long) {
+        composeRule.onNodeWithTag(UiTestTags.REMINDER_CONFIRM_PRIMARY_BUTTON).performTouchInput {
+            down(center)
+            advanceEventTime(holdDurationMs)
+            up()
         }
         composeRule.waitForIdle()
     }

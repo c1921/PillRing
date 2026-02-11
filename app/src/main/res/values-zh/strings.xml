@@ -111,4 +111,9 @@
     <string name="reason_daily_scheduled">由计划触发的每日提醒。</string>
     <string name="reason_delete_fallback">通知被清除；30 秒后触发兜底提醒。此前原因：%1$s</string>
     <string name="reason_unknown">未知</string>
+    <string name="btn_reminder_hold_to_confirm">长按确认</string>
+    <string name="reminder_confirm_long_press_description">服药后长按确认，可停止该计划当前这一轮提醒。</string>
+    <string name="reminder_confirm_hold_hint_idle">长按 1.2 秒以确认停止提醒。</string>
+    <string name="reminder_confirm_hold_hint_holding">继续按住...</string>
+    <string name="reminder_confirm_hold_hint_completed">已确认，正在停止提醒...</string>
 </resources>

@@ -12,7 +12,16 @@ import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -22,10 +31,12 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
@@ -38,6 +49,7 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ElevatedCard
@@ -63,17 +75,25 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
@@ -99,8 +119,15 @@ import java.time.LocalTime
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.util.Locale
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
+import kotlinx.coroutines.launch
 
 private const val MAX_PLAN_NAME_LENGTH = 30
+private const val REMINDER_CONFIRM_HOLD_DURATION_MS = 1200
+private const val REMINDER_CONFIRM_HAPTIC_PULSE_INTERVAL_MS = 250L
+private const val REMINDER_CONFIRM_RELEASE_ANIMATION_MS = 180
 
 private enum class AppScreen {
     HOME,
@@ -108,6 +135,12 @@ private enum class AppScreen {
     SETTINGS_LANGUAGE,
     SETTINGS_PERMISSION,
     REMINDER_CONFIRM
+}
+
+private enum class HoldToConfirmState {
+    IDLE,
+    HOLDING,
+    COMPLETED
 }
 
 private data class PlanEditorState(
@@ -383,7 +416,7 @@ class MainActivity : ComponentActivity() {
 
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
-        setIntent(intent)
+        // Keep processing the fresh intent without replacing ActivityScenario's launch intent.
         pendingReminderConfirmPlanId = extractReminderConfirmPlanId(intent)
     }
 
@@ -1059,6 +1092,9 @@ private fun ReminderConfirmScreen(
             minute = plan.minute
         )
     }
+    var holdState by remember {
+        mutableStateOf(HoldToConfirmState.IDLE)
+    }
 
     Scaffold(
         modifier = Modifier
@@ -1088,13 +1124,13 @@ private fun ReminderConfirmScreen(
                 .fillMaxSize()
                 .padding(innerPadding)
                 .padding(horizontal = 16.dp, vertical = 16.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
+            verticalArrangement = Arrangement.spacedBy(20.dp)
         ) {
-            Card(
+            ElevatedCard(
                 modifier = Modifier
                     .fillMaxWidth()
                     .testTag(UiTestTags.REMINDER_CONFIRM_SECONDARY_CONTENT),
-                colors = CardDefaults.cardColors(
+                colors = CardDefaults.elevatedCardColors(
                     containerColor = MaterialTheme.colorScheme.surfaceContainerHigh
                 )
             ) {
@@ -1115,20 +1151,215 @@ private fun ReminderConfirmScreen(
                         style = MaterialTheme.typography.bodyLarge
                     )
                     Text(
-                        text = stringResource(R.string.reminder_confirm_description),
+                        text = stringResource(R.string.reminder_confirm_long_press_description),
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
             }
 
-            Button(
-                onClick = onConfirmClick,
+            Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .testTag(UiTestTags.REMINDER_CONFIRM_PRIMARY_BUTTON)
+                    .weight(1f),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center
             ) {
-                Text(text = stringResource(R.string.btn_confirm_stop_plan_reminder))
+                HoldToConfirmButton(
+                    text = stringResource(R.string.btn_reminder_hold_to_confirm),
+                    onConfirm = onConfirmClick,
+                    onStateChanged = { state ->
+                        holdState = state
+                    }
+                )
+                Spacer(modifier = Modifier.size(16.dp))
+                AnimatedContent(
+                    targetState = holdState,
+                    label = "reminder_confirm_hold_hint"
+                ) { state ->
+                    val textResId = when (state) {
+                        HoldToConfirmState.IDLE -> R.string.reminder_confirm_hold_hint_idle
+                        HoldToConfirmState.HOLDING -> R.string.reminder_confirm_hold_hint_holding
+                        HoldToConfirmState.COMPLETED -> R.string.reminder_confirm_hold_hint_completed
+                    }
+                    Text(
+                        text = stringResource(textResId),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .testTag(UiTestTags.REMINDER_CONFIRM_HOLD_HINT)
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun HoldToConfirmButton(
+    text: String,
+    onConfirm: () -> Unit,
+    onStateChanged: (HoldToConfirmState) -> Unit
+) {
+    val hapticFeedback = LocalHapticFeedback.current
+    val coroutineScope = rememberCoroutineScope()
+    val currentOnConfirm by rememberUpdatedState(onConfirm)
+
+    val progress = remember {
+        Animatable(0f)
+    }
+    var holdState by remember {
+        mutableStateOf(HoldToConfirmState.IDLE)
+    }
+    var isHolding by remember {
+        mutableStateOf(false)
+    }
+    var hasConfirmed by remember {
+        mutableStateOf(false)
+    }
+    var progressJob by remember {
+        mutableStateOf<Job?>(null)
+    }
+    var hapticJob by remember {
+        mutableStateOf<Job?>(null)
+    }
+
+    LaunchedEffect(holdState) {
+        onStateChanged(holdState)
+    }
+
+    DisposableEffect(Unit) {
+        onDispose {
+            progressJob?.cancel()
+            hapticJob?.cancel()
+        }
+    }
+
+    fun startHold() {
+        progressJob?.cancel()
+        hapticJob?.cancel()
+        isHolding = true
+        hasConfirmed = false
+        holdState = HoldToConfirmState.HOLDING
+
+        progressJob = coroutineScope.launch {
+            progress.snapTo(0f)
+            progress.animateTo(
+                targetValue = 1f,
+                animationSpec = tween(
+                    durationMillis = REMINDER_CONFIRM_HOLD_DURATION_MS,
+                    easing = LinearEasing
+                )
+            )
+            if (isHolding && !hasConfirmed) {
+                hasConfirmed = true
+                holdState = HoldToConfirmState.COMPLETED
+                hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
+                currentOnConfirm()
+            }
+        }
+        hapticJob = coroutineScope.launch {
+            while (isActive && isHolding && !hasConfirmed) {
+                delay(REMINDER_CONFIRM_HAPTIC_PULSE_INTERVAL_MS)
+                if (isHolding && !hasConfirmed) {
+                    hapticFeedback.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                }
+            }
+        }
+    }
+
+    fun stopHold() {
+        isHolding = false
+        hapticJob?.cancel()
+        hapticJob = null
+        if (!hasConfirmed) {
+            progressJob?.cancel()
+            progressJob = null
+            coroutineScope.launch {
+                progress.animateTo(
+                    targetValue = 0f,
+                    animationSpec = tween(
+                        durationMillis = REMINDER_CONFIRM_RELEASE_ANIMATION_MS,
+                        easing = FastOutSlowInEasing
+                    )
+                )
+                holdState = HoldToConfirmState.IDLE
+            }
+        }
+    }
+
+    val buttonScale by animateFloatAsState(
+        targetValue = if (isHolding && !hasConfirmed) 0.94f else 1f,
+        animationSpec = spring(),
+        label = "reminder_confirm_button_scale"
+    )
+    val buttonContainerColor by animateColorAsState(
+        targetValue = when {
+            hasConfirmed -> MaterialTheme.colorScheme.secondaryContainer
+            isHolding -> MaterialTheme.colorScheme.primaryContainer
+            else -> MaterialTheme.colorScheme.primary
+        },
+        animationSpec = tween(durationMillis = 180),
+        label = "reminder_confirm_button_container_color"
+    )
+    val buttonContentColor by animateColorAsState(
+        targetValue = when {
+            hasConfirmed -> MaterialTheme.colorScheme.onSecondaryContainer
+            isHolding -> MaterialTheme.colorScheme.onPrimaryContainer
+            else -> MaterialTheme.colorScheme.onPrimary
+        },
+        animationSpec = tween(durationMillis = 180),
+        label = "reminder_confirm_button_content_color"
+    )
+
+    Box(
+        modifier = Modifier.size(140.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        CircularProgressIndicator(
+            progress = {
+                progress.value
+            },
+            modifier = Modifier
+                .fillMaxSize()
+                .testTag(UiTestTags.REMINDER_CONFIRM_HOLD_PROGRESS),
+            color = MaterialTheme.colorScheme.primary,
+            trackColor = MaterialTheme.colorScheme.surfaceContainerHighest,
+            strokeWidth = 8.dp,
+            strokeCap = StrokeCap.Round
+        )
+        Surface(
+            modifier = Modifier
+                .size(112.dp)
+                .scale(buttonScale)
+                .testTag(UiTestTags.REMINDER_CONFIRM_PRIMARY_BUTTON)
+                .pointerInput(Unit) {
+                    detectTapGestures(
+                        onPress = {
+                            startHold()
+                            tryAwaitRelease()
+                            stopHold()
+                        }
+                    )
+                },
+            shape = CircleShape,
+            color = buttonContainerColor,
+            shadowElevation = if (isHolding && !hasConfirmed) 2.dp else 8.dp,
+            tonalElevation = if (isHolding && !hasConfirmed) 2.dp else 8.dp
+        ) {
+            Box(
+                modifier = Modifier.fillMaxSize(),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = text,
+                    style = MaterialTheme.typography.labelLarge,
+                    color = buttonContentColor,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.padding(horizontal = 12.dp)
+                )
             }
         }
     }

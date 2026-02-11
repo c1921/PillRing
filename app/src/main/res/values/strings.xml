@@ -111,4 +111,9 @@
     <string name="reason_daily_scheduled">Daily reminder triggered by schedule.</string>
     <string name="reason_delete_fallback">Notification dismissed; fallback reminder in 30 seconds. Previous reason: %1$s</string>
     <string name="reason_unknown">unknown</string>
+    <string name="btn_reminder_hold_to_confirm">Press and hold</string>
+    <string name="reminder_confirm_long_press_description">After taking medicine, press and hold to stop the current reminder for this plan.</string>
+    <string name="reminder_confirm_hold_hint_idle">Press and hold for 1.2 seconds to confirm.</string>
+    <string name="reminder_confirm_hold_hint_holding">Keep holding...</string>
+    <string name="reminder_confirm_hold_hint_completed">Confirmed. Stopping reminder...</string>
 </resources>
