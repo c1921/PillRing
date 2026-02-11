@@ -769,25 +769,7 @@ private fun ReminderHomeScreen(
     onPlanEnabledChange: (ReminderPlan, Boolean) -> Unit,
     onOpenSettingsClick: () -> Unit
 ) {
-    val hasActiveReminder = plans.any { it.isReminderActive }
     val canAddPlan = plans.size < maxPlans
-    val reminderStatusText = stringResource(
-        if (hasActiveReminder) {
-            R.string.status_reminder_active_multi
-        } else {
-            R.string.status_reminder_idle
-        }
-    )
-    val reminderStatusContainerColor = if (hasActiveReminder) {
-        MaterialTheme.colorScheme.errorContainer
-    } else {
-        MaterialTheme.colorScheme.secondaryContainer
-    }
-    val reminderStatusContentColor = if (hasActiveReminder) {
-        MaterialTheme.colorScheme.onErrorContainer
-    } else {
-        MaterialTheme.colorScheme.onSecondaryContainer
-    }
 
     Scaffold(
         modifier = Modifier.fillMaxSize(),
@@ -850,47 +832,6 @@ private fun ReminderHomeScreen(
             contentPadding = PaddingValues(top = 16.dp, bottom = 96.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            item {
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.surfaceContainerHigh
-                    )
-                ) {
-                    Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(16.dp),
-                        verticalArrangement = Arrangement.spacedBy(10.dp)
-                    ) {
-                        Text(
-                            text = stringResource(R.string.home_overview_title),
-                            style = MaterialTheme.typography.titleMedium
-                        )
-                        Text(
-                            text = stringResource(R.string.test_page_description),
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                        Text(
-                            text = stringResource(R.string.label_plan_count, plans.size, maxPlans),
-                            style = MaterialTheme.typography.titleSmall
-                        )
-                        Surface(
-                            shape = MaterialTheme.shapes.small,
-                            color = reminderStatusContainerColor
-                        ) {
-                            Text(
-                                text = reminderStatusText,
-                                color = reminderStatusContentColor,
-                                style = MaterialTheme.typography.labelLarge,
-                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp)
-                            )
-                        }
-                    }
-                }
-            }
-
             if (plans.isEmpty()) {
                 item {
                     ElevatedCard(

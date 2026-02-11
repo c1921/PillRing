@@ -1,11 +1,8 @@
 <resources>
     <string name="app_name">PillRing</string>
     <string name="test_page_title">Reminders</string>
-    <string name="test_page_description">Manage daily plans with reliable reminder delivery.</string>
-    <string name="home_overview_title">Today at a glance</string>
 
     <string name="label_selected_time">Selected time: %1$s</string>
-    <string name="label_plan_count">Plans: %1$d/%2$d</string>
     <string name="label_plan_name">Plan name</string>
     <string name="label_name_length">%1$d/%2$d</string>
 
@@ -62,8 +59,6 @@
     <string name="status_plan_enabled">Plan is enabled.</string>
     <string name="status_plan_disabled">Plan is disabled.</string>
     <string name="status_reminder_active">Reminder is active. Confirm to stop this round.</string>
-    <string name="status_reminder_active_multi">At least one plan reminder is active.</string>
-    <string name="status_reminder_idle">No active reminder right now.</string>
     <string name="empty_plan_list">No plans yet. Add one to get started.</string>
     <string name="default_plan_name">Plan %1$d</string>
     <string name="reminder_confirm_page_title">Confirm reminder</string>
