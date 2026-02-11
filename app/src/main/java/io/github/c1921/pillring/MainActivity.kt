@@ -316,6 +316,19 @@ class MainActivity : ComponentActivity() {
                             onOpenSettingsClick = {
                                 permissionItems = buildPermissionItems()
                                 currentScreen = AppScreen.SETTINGS_OVERVIEW
+                            },
+                            onOpenReminderConfirmFromPlanCard = { plan ->
+                                val targetPlan = plans.firstOrNull { it.id == plan.id }
+                                if (targetPlan?.isReminderActive == true) {
+                                    reminderConfirmPlanId = targetPlan.id
+                                    currentScreen = AppScreen.REMINDER_CONFIRM
+                                } else {
+                                    Toast.makeText(
+                                        this@MainActivity,
+                                        getString(R.string.msg_reminder_confirm_entry_invalid),
+                                        Toast.LENGTH_SHORT
+                                    ).show()
+                                }
                             }
                         )
                     }
@@ -767,7 +780,8 @@ private fun ReminderHomeScreen(
     onMoveUpClick: (ReminderPlan) -> Unit,
     onMoveDownClick: (ReminderPlan) -> Unit,
     onPlanEnabledChange: (ReminderPlan, Boolean) -> Unit,
-    onOpenSettingsClick: () -> Unit
+    onOpenSettingsClick: () -> Unit,
+    onOpenReminderConfirmFromPlanCard: (ReminderPlan) -> Unit
 ) {
     val canAddPlan = plans.size < maxPlans
 
@@ -867,6 +881,13 @@ private fun ReminderHomeScreen(
                         plan = plan,
                         index = index,
                         totalCount = plans.size,
+                        onCardClick = if (plan.isReminderActive) {
+                            {
+                                onOpenReminderConfirmFromPlanCard(plan)
+                            }
+                        } else {
+                            null
+                        },
                         onEditClick = { onEditPlanClick(plan) },
                         onDeleteClick = { onDeletePlanClick(plan) },
                         onMoveUpClick = { onMoveUpClick(plan) },
@@ -884,6 +905,7 @@ private fun PlanCard(
     plan: ReminderPlan,
     index: Int,
     totalCount: Int,
+    onCardClick: (() -> Unit)?,
     onEditClick: () -> Unit,
     onDeleteClick: () -> Unit,
     onMoveUpClick: () -> Unit,
@@ -901,19 +923,34 @@ private fun PlanCard(
     var showMenu by rememberSaveable(plan.id) {
         mutableStateOf(false)
     }
-    val planStatusContainerColor = if (plan.enabled) {
-        MaterialTheme.colorScheme.primaryContainer
-    } else {
-        MaterialTheme.colorScheme.surfaceContainerHighest
+    val planStatusContainerColor = when {
+        plan.isReminderActive -> MaterialTheme.colorScheme.errorContainer
+        plan.enabled -> MaterialTheme.colorScheme.primaryContainer
+        else -> MaterialTheme.colorScheme.surfaceContainerHighest
     }
-    val planStatusContentColor = if (plan.enabled) {
-        MaterialTheme.colorScheme.onPrimaryContainer
-    } else {
-        MaterialTheme.colorScheme.onSurfaceVariant
+    val planStatusContentColor = when {
+        plan.isReminderActive -> MaterialTheme.colorScheme.onErrorContainer
+        plan.enabled -> MaterialTheme.colorScheme.onPrimaryContainer
+        else -> MaterialTheme.colorScheme.onSurfaceVariant
     }
+    val planStatusResId = when {
+        plan.isReminderActive -> R.string.status_reminder_active
+        plan.enabled -> R.string.status_plan_enabled
+        else -> R.string.status_plan_disabled
+    }
+    val cardModifier = Modifier
+        .fillMaxWidth()
+        .testTag(UiTestTags.planCard(plan.id))
+        .then(
+            if (onCardClick != null) {
+                Modifier.clickable(onClick = onCardClick)
+            } else {
+                Modifier
+            }
+        )
 
     ElevatedCard(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = cardModifier,
         colors = CardDefaults.elevatedCardColors(
             containerColor = MaterialTheme.colorScheme.surfaceContainerLow
         )
@@ -947,13 +984,7 @@ private fun PlanCard(
                         color = planStatusContainerColor
                     ) {
                         Text(
-                            text = stringResource(
-                                if (plan.enabled) {
-                                    R.string.status_plan_enabled
-                                } else {
-                                    R.string.status_plan_disabled
-                                }
-                            ),
+                            text = stringResource(planStatusResId),
                             style = MaterialTheme.typography.labelLarge,
                             color = planStatusContentColor,
                             modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp)
@@ -2221,7 +2252,8 @@ private fun ReminderHomeScreenPreview() {
             onMoveUpClick = {},
             onMoveDownClick = {},
             onPlanEnabledChange = { _, _ -> },
-            onOpenSettingsClick = {}
+            onOpenSettingsClick = {},
+            onOpenReminderConfirmFromPlanCard = {}
         )
     }
 }

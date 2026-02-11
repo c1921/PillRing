@@ -5,12 +5,14 @@ import android.content.Context
 import android.content.Intent
 import androidx.annotation.StringRes
 import androidx.compose.ui.test.assertCountEquals
+import androidx.compose.ui.test.assertHasNoClickAction
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTouchInput
 import androidx.test.rule.GrantPermissionRule
 import io.github.c1921.pillring.notification.ReminderContract
@@ -52,6 +54,32 @@ class MainActivityReminderConfirmNavigationTest {
         composeRule.onNodeWithTag(UiTestTags.REMINDER_CONFIRM_SCREEN).assertIsDisplayed()
         composeRule.onNodeWithTag(UiTestTags.REMINDER_CONFIRM_SECONDARY_CONTENT).assertIsDisplayed()
         composeRule.onNodeWithTag(UiTestTags.REMINDER_CONFIRM_PRIMARY_BUTTON).assertIsDisplayed()
+    }
+
+    @Test
+    fun activeReminder_planCardTap_opensReminderConfirmScreen() {
+        val (planAId) = seedPlans(PlanSeed(name = "Plan A", hour = 8, minute = 0, active = true))
+
+        composeRule.onNodeWithTag(UiTestTags.planCard(planAId)).performClick()
+
+        composeRule.onNodeWithTag(UiTestTags.REMINDER_CONFIRM_SCREEN).assertIsDisplayed()
+        composeRule.onNodeWithTag(UiTestTags.REMINDER_CONFIRM_SECONDARY_CONTENT).assertIsDisplayed()
+        composeRule.onNodeWithTag(UiTestTags.REMINDER_CONFIRM_PRIMARY_BUTTON).assertIsDisplayed()
+    }
+
+    @Test
+    fun inactivePlanCardTap_doesNotOpenReminderConfirmScreen() {
+        val (planAId) = seedPlans(PlanSeed(name = "Plan A", hour = 8, minute = 0, active = false))
+
+        composeRule.onNodeWithTag(UiTestTags.planCard(planAId)).assertHasNoClickAction()
+        composeRule.onAllNodesWithTag(UiTestTags.REMINDER_CONFIRM_SCREEN).assertCountEquals(0)
+    }
+
+    @Test
+    fun activeReminder_planCardShowsActiveStatus() {
+        seedPlans(PlanSeed(name = "Plan A", hour = 8, minute = 0, active = true))
+
+        composeRule.onNodeWithText(string(R.string.status_reminder_active)).assertIsDisplayed()
     }
 
     @Test
