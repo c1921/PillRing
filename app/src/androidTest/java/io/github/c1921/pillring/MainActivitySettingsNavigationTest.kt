@@ -34,10 +34,6 @@ class MainActivitySettingsNavigationTest {
         composeRule
             .onNodeWithTag(UiTestTags.SETTINGS_PERMISSION_ICON, useUnmergedTree = true)
             .assertIsDisplayed()
-        composeRule.onNodeWithTag(UiTestTags.SETTINGS_UPDATE_ITEM).assertIsDisplayed()
-        composeRule
-            .onNodeWithTag(UiTestTags.SETTINGS_UPDATE_ICON, useUnmergedTree = true)
-            .assertIsDisplayed()
         composeRule.onNodeWithTag(UiTestTags.SETTINGS_ABOUT_ITEM).assertIsDisplayed()
         composeRule
             .onNodeWithTag(UiTestTags.SETTINGS_ABOUT_ICON, useUnmergedTree = true)
@@ -86,6 +82,8 @@ class MainActivitySettingsNavigationTest {
 
         composeRule.onNodeWithTag(UiTestTags.SETTINGS_ABOUT_PAGE).assertIsDisplayed()
         composeRule.onNodeWithTag(UiTestTags.SETTINGS_ABOUT_VERSION_VALUE).assertIsDisplayed()
+        composeRule.onNodeWithTag(UiTestTags.SETTINGS_ABOUT_UPDATE_CARD).assertIsDisplayed()
+        composeRule.onNodeWithTag(UiTestTags.SETTINGS_ABOUT_UPDATE_BUTTON).assertIsDisplayed()
     }
 
     @Test
@@ -144,10 +142,6 @@ class MainActivitySettingsNavigationTest {
         composeRule.onNodeWithTag(UiTestTags.SETTINGS_PERMISSION_ITEM).assertIsDisplayed()
         composeRule
             .onNodeWithTag(UiTestTags.SETTINGS_PERMISSION_ICON, useUnmergedTree = true)
-            .assertIsDisplayed()
-        composeRule.onNodeWithTag(UiTestTags.SETTINGS_UPDATE_ITEM).assertIsDisplayed()
-        composeRule
-            .onNodeWithTag(UiTestTags.SETTINGS_UPDATE_ICON, useUnmergedTree = true)
             .assertIsDisplayed()
         composeRule.onNodeWithTag(UiTestTags.SETTINGS_ABOUT_ITEM).assertIsDisplayed()
         composeRule

@@ -271,6 +271,66 @@ class MainActivity : ComponentActivity() {
                 }
             }
 
+            val onUpdateClick: () -> Unit = {
+                when (updateUiState.status) {
+                    UpdateStatus.CHECKING -> Unit
+                    UpdateStatus.UPDATE_AVAILABLE -> {
+                        val releaseUrl = updateUiState.releaseUrl
+                            ?: AppUpdateRepository.DEFAULT_RELEASE_PAGE_URL
+                        if (!openUpdateReleasePage(releaseUrl)) {
+                            Toast.makeText(
+                                this@MainActivity,
+                                getString(R.string.msg_open_update_page_failed),
+                                Toast.LENGTH_SHORT
+                            ).show()
+                        }
+                    }
+
+                    else -> {
+                        mainScope.launch {
+                            updateUiState = UpdateUiState.checking(BuildConfig.VERSION_NAME)
+                            val checkResult = updateRepository.checkForUpdates(
+                                currentVersionName = BuildConfig.VERSION_NAME,
+                                force = true
+                            )
+                            updateUiState = UpdateUiState.fromResult(checkResult)
+                            when (checkResult.status) {
+                                UpdateStatus.UPDATE_AVAILABLE -> {
+                                    val releaseUrl = checkResult.releaseUrl
+                                        ?: AppUpdateRepository.DEFAULT_RELEASE_PAGE_URL
+                                    if (!openUpdateReleasePage(releaseUrl)) {
+                                        Toast.makeText(
+                                            this@MainActivity,
+                                            getString(R.string.msg_open_update_page_failed),
+                                            Toast.LENGTH_SHORT
+                                        ).show()
+                                    }
+                                }
+
+                                UpdateStatus.UP_TO_DATE -> {
+                                    Toast.makeText(
+                                        this@MainActivity,
+                                        getString(R.string.msg_update_up_to_date),
+                                        Toast.LENGTH_SHORT
+                                    ).show()
+                                }
+
+                                UpdateStatus.FAILED -> {
+                                    Toast.makeText(
+                                        this@MainActivity,
+                                        getString(R.string.msg_update_check_failed),
+                                        Toast.LENGTH_SHORT
+                                    ).show()
+                                }
+
+                                UpdateStatus.IDLE,
+                                UpdateStatus.CHECKING -> Unit
+                            }
+                        }
+                    }
+                }
+            }
+
             PillRingTheme {
                 BackHandler(enabled = currentScreen != AppScreen.HOME) {
                     when (currentScreen) {
@@ -366,71 +426,10 @@ class MainActivity : ComponentActivity() {
                             permissionItems = permissionItems,
                             selectedLanguage = selectedLanguage,
                             effectiveLanguageForSummary = effectiveLanguageForSummary,
-                            updateUiState = updateUiState,
                             appVersionName = BuildConfig.VERSION_NAME,
                             onBackClick = { currentScreen = AppScreen.HOME },
                             onLanguageClick = { currentScreen = AppScreen.SETTINGS_LANGUAGE },
                             onPermissionClick = { currentScreen = AppScreen.SETTINGS_PERMISSION },
-                            onUpdateClick = {
-                                when (updateUiState.status) {
-                                    UpdateStatus.CHECKING -> Unit
-                                    UpdateStatus.UPDATE_AVAILABLE -> {
-                                        val releaseUrl = updateUiState.releaseUrl
-                                            ?: AppUpdateRepository.DEFAULT_RELEASE_PAGE_URL
-                                        if (!openUpdateReleasePage(releaseUrl)) {
-                                            Toast.makeText(
-                                                this@MainActivity,
-                                                getString(R.string.msg_open_update_page_failed),
-                                                Toast.LENGTH_SHORT
-                                            ).show()
-                                        }
-                                    }
-
-                                    else -> {
-                                        mainScope.launch {
-                                            updateUiState =
-                                                UpdateUiState.checking(BuildConfig.VERSION_NAME)
-                                            val checkResult = updateRepository.checkForUpdates(
-                                                currentVersionName = BuildConfig.VERSION_NAME,
-                                                force = true
-                                            )
-                                            updateUiState = UpdateUiState.fromResult(checkResult)
-                                            when (checkResult.status) {
-                                                UpdateStatus.UPDATE_AVAILABLE -> {
-                                                    val releaseUrl = checkResult.releaseUrl
-                                                        ?: AppUpdateRepository.DEFAULT_RELEASE_PAGE_URL
-                                                    if (!openUpdateReleasePage(releaseUrl)) {
-                                                        Toast.makeText(
-                                                            this@MainActivity,
-                                                            getString(R.string.msg_open_update_page_failed),
-                                                            Toast.LENGTH_SHORT
-                                                        ).show()
-                                                    }
-                                                }
-
-                                                UpdateStatus.UP_TO_DATE -> {
-                                                    Toast.makeText(
-                                                        this@MainActivity,
-                                                        getString(R.string.msg_update_up_to_date),
-                                                        Toast.LENGTH_SHORT
-                                                    ).show()
-                                                }
-
-                                                UpdateStatus.FAILED -> {
-                                                    Toast.makeText(
-                                                        this@MainActivity,
-                                                        getString(R.string.msg_update_check_failed),
-                                                        Toast.LENGTH_SHORT
-                                                    ).show()
-                                                }
-
-                                                UpdateStatus.IDLE,
-                                                UpdateStatus.CHECKING -> Unit
-                                            }
-                                        }
-                                    }
-                                }
-                            },
                             onAboutClick = { currentScreen = AppScreen.SETTINGS_ABOUT }
                         )
                     }
@@ -469,6 +468,8 @@ class MainActivity : ComponentActivity() {
                     AppScreen.SETTINGS_ABOUT -> {
                         AboutSettingsScreen(
                             appVersionName = BuildConfig.VERSION_NAME,
+                            updateUiState = updateUiState,
+                            onUpdateClick = onUpdateClick,
                             onBackClick = { currentScreen = AppScreen.SETTINGS_OVERVIEW }
                         )
                     }
@@ -1893,12 +1894,10 @@ private fun SettingsOverviewScreen(
     permissionItems: List<PermissionHealthItem>,
     selectedLanguage: AppLanguage,
     effectiveLanguageForSummary: AppLanguage,
-    updateUiState: UpdateUiState,
     appVersionName: String,
     onBackClick: () -> Unit,
     onLanguageClick: () -> Unit,
     onPermissionClick: () -> Unit,
-    onUpdateClick: () -> Unit,
     onAboutClick: () -> Unit
 ) {
     val languageSummary = languageSummaryText(
@@ -1906,7 +1905,6 @@ private fun SettingsOverviewScreen(
         effectiveLanguageForSummary = effectiveLanguageForSummary
     )
     val permissionSummary = permissionOverviewSummary(permissionItems)
-    val updateSummary = updateOverviewSummary(updateUiState)
     val aboutVersionName = appVersionName.ifBlank {
         stringResource(R.string.settings_about_version_unknown)
     }
@@ -1962,16 +1960,6 @@ private fun SettingsOverviewScreen(
                     testTag = UiTestTags.SETTINGS_PERMISSION_ITEM,
                     iconTestTag = UiTestTags.SETTINGS_PERMISSION_ICON,
                     onClick = onPermissionClick
-                )
-            }
-            item {
-                SettingsOverviewItem(
-                    title = stringResource(R.string.settings_update_title),
-                    summary = updateSummary,
-                    icon = Icons.Outlined.Settings,
-                    testTag = UiTestTags.SETTINGS_UPDATE_ITEM,
-                    iconTestTag = UiTestTags.SETTINGS_UPDATE_ICON,
-                    onClick = onUpdateClick
                 )
             }
             item {
@@ -2041,11 +2029,22 @@ private fun SettingsOverviewItem(
 @OptIn(ExperimentalMaterial3Api::class)
 private fun AboutSettingsScreen(
     appVersionName: String,
+    updateUiState: UpdateUiState,
+    onUpdateClick: () -> Unit,
     onBackClick: () -> Unit
 ) {
     val aboutVersionName = appVersionName.ifBlank {
         stringResource(R.string.settings_about_version_unknown)
     }
+    val updateSummary = updateOverviewSummary(updateUiState)
+    val updateActionLabelResId = when (updateUiState.status) {
+        UpdateStatus.CHECKING -> R.string.settings_update_action_checking
+        UpdateStatus.UPDATE_AVAILABLE -> R.string.settings_update_action_open_release
+        UpdateStatus.IDLE,
+        UpdateStatus.UP_TO_DATE,
+        UpdateStatus.FAILED -> R.string.settings_update_action_check_now
+    }
+    val updateActionEnabled = updateUiState.status != UpdateStatus.CHECKING
 
     Scaffold(
         modifier = Modifier
@@ -2102,6 +2101,41 @@ private fun AboutSettingsScreen(
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier.testTag(UiTestTags.SETTINGS_ABOUT_VERSION_VALUE)
                         )
+                    }
+                }
+            }
+            item {
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .testTag(UiTestTags.SETTINGS_ABOUT_UPDATE_CARD),
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.surfaceContainerHigh
+                    )
+                ) {
+                    Column(
+                        modifier = Modifier.padding(16.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Text(
+                            text = stringResource(R.string.settings_update_title),
+                            style = MaterialTheme.typography.titleMedium
+                        )
+                        Text(
+                            text = updateSummary,
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.testTag(UiTestTags.SETTINGS_ABOUT_UPDATE_SUMMARY)
+                        )
+                        FilledTonalButton(
+                            onClick = onUpdateClick,
+                            enabled = updateActionEnabled,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .testTag(UiTestTags.SETTINGS_ABOUT_UPDATE_BUTTON)
+                        ) {
+                            Text(text = stringResource(updateActionLabelResId))
+                        }
                     }
                 }
             }
@@ -2511,18 +2545,10 @@ private fun SettingsOverviewScreenPreview() {
             ),
             selectedLanguage = AppLanguage.SYSTEM,
             effectiveLanguageForSummary = AppLanguage.ENGLISH,
-            updateUiState = UpdateUiState(
-                status = UpdateStatus.UPDATE_AVAILABLE,
-                currentVersionName = "0.1.0",
-                latestVersionName = "0.2.0",
-                releaseUrl = AppUpdateRepository.DEFAULT_RELEASE_PAGE_URL,
-                lastCheckedAtEpochMs = System.currentTimeMillis()
-            ),
             appVersionName = "1.0",
             onBackClick = {},
             onLanguageClick = {},
             onPermissionClick = {},
-            onUpdateClick = {},
             onAboutClick = {}
         )
     }
@@ -2534,6 +2560,14 @@ private fun AboutSettingsScreenPreview() {
     PillRingTheme {
         AboutSettingsScreen(
             appVersionName = "1.0",
+            updateUiState = UpdateUiState(
+                status = UpdateStatus.UPDATE_AVAILABLE,
+                currentVersionName = "0.1.0",
+                latestVersionName = "0.2.0",
+                releaseUrl = AppUpdateRepository.DEFAULT_RELEASE_PAGE_URL,
+                lastCheckedAtEpochMs = System.currentTimeMillis()
+            ),
+            onUpdateClick = {},
             onBackClick = {}
         )
     }

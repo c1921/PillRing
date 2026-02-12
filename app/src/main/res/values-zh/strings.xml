@@ -95,6 +95,9 @@
     <string name="settings_update_summary_available">当前 %1$s，最新 %2$s</string>
     <string name="settings_update_summary_up_to_date">当前已是最新版本</string>
     <string name="settings_update_summary_failed">上次检查失败，点击重试。</string>
+    <string name="settings_update_action_check_now">检查更新</string>
+    <string name="settings_update_action_open_release">前往发布页</string>
+    <string name="settings_update_action_checking">检查中...</string>
 
     <string name="permission_health_title">权限健康检查</string>
     <string name="permission_health_description">检查提醒相关权限，并在需要时打开系统设置。</string>
