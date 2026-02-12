@@ -1858,31 +1858,14 @@ private fun PlanEditorDialog(
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth()
                 )
-                Surface(
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = MaterialTheme.shapes.medium,
-                    color = MaterialTheme.colorScheme.secondaryContainer
-                ) {
-                    Text(
-                        text = stringResource(R.string.label_selected_time, selectedTimeText),
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSecondaryContainer,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 12.dp, vertical = 10.dp)
-                            .testTag(UiTestTags.PLAN_EDITOR_SELECTED_TIME)
-                    )
-                }
-                FilledTonalButton(
+                PickerValueButton(
+                    text = stringResource(R.string.label_selected_time, selectedTimeText),
                     onClick = {
                         showTimePicker = true
                     },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .testTag(UiTestTags.PLAN_EDITOR_SELECT_TIME_BUTTON)
-                ) {
-                    Text(text = stringResource(R.string.btn_select_time))
-                }
+                    buttonTestTag = UiTestTags.PLAN_EDITOR_SELECT_TIME_BUTTON,
+                    valueTextTestTag = UiTestTags.PLAN_EDITOR_SELECTED_TIME
+                )
                 Text(
                     text = stringResource(R.string.label_repeat_mode),
                     style = MaterialTheme.typography.labelLarge
@@ -1954,33 +1937,16 @@ private fun PlanEditorDialog(
                             .fillMaxWidth()
                             .testTag(UiTestTags.PLAN_EDITOR_INTERVAL_DAYS_INPUT)
                     )
-                    Surface(
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = MaterialTheme.shapes.medium,
-                        color = MaterialTheme.colorScheme.secondaryContainer
-                    ) {
-                        val startDateLabel = selectedStartDateText
-                            ?: stringResource(R.string.label_start_date_not_selected)
-                        Text(
-                            text = stringResource(R.string.label_selected_start_date, startDateLabel),
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSecondaryContainer,
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(horizontal = 12.dp, vertical = 10.dp)
-                                .testTag(UiTestTags.PLAN_EDITOR_SELECTED_START_DATE)
-                        )
-                    }
-                    FilledTonalButton(
+                    val startDateLabel = selectedStartDateText
+                        ?: stringResource(R.string.label_start_date_not_selected)
+                    PickerValueButton(
+                        text = stringResource(R.string.label_selected_start_date, startDateLabel),
                         onClick = {
                             showStartDatePicker = true
                         },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .testTag(UiTestTags.PLAN_EDITOR_SELECT_START_DATE_BUTTON)
-                    ) {
-                        Text(text = stringResource(R.string.btn_select_start_date))
-                    }
+                        buttonTestTag = UiTestTags.PLAN_EDITOR_SELECT_START_DATE_BUTTON,
+                        valueTextTestTag = UiTestTags.PLAN_EDITOR_SELECTED_START_DATE
+                    )
                 }
             }
         },
@@ -2042,6 +2008,26 @@ private fun PlanEditorDialog(
                 startDateEpochDay = selectedEpochDay
                 showStartDatePicker = false
             }
+        )
+    }
+}
+
+@Composable
+private fun PickerValueButton(
+    text: String,
+    onClick: () -> Unit,
+    buttonTestTag: String,
+    valueTextTestTag: String
+) {
+    FilledTonalButton(
+        onClick = onClick,
+        modifier = Modifier
+            .fillMaxWidth()
+            .testTag(buttonTestTag)
+    ) {
+        Text(
+            text = text,
+            modifier = Modifier.testTag(valueTextTestTag)
         )
     }
 }

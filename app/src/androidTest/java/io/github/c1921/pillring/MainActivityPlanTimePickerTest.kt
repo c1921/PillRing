@@ -76,6 +76,14 @@ class MainActivityPlanTimePickerTest {
     }
 
     @Test
+    fun defaultMode_timeSelection_hasSinglePrimaryControl() {
+        openAddPlanDialog()
+
+        composeRule.onAllNodesWithTag(UiTestTags.PLAN_EDITOR_SELECT_TIME_BUTTON).assertCountEquals(1)
+        composeRule.onAllNodesWithTag(UiTestTags.PLAN_EDITOR_SELECTED_TIME).assertCountEquals(1)
+    }
+
+    @Test
     fun intervalMode_selectStartDateButton_opensDatePickerDialog() {
         openAddPlanDialog()
 
@@ -93,6 +101,17 @@ class MainActivityPlanTimePickerTest {
         composeRule.onNodeWithTag(UiTestTags.PLAN_EDITOR_INTERVAL_DAYS_INPUT).performTextClearance()
 
         composeRule.onNodeWithText(string(R.string.dialog_btn_save)).assertIsNotEnabled()
+    }
+
+    @Test
+    fun intervalMode_startDateSelection_hasSinglePrimaryControl() {
+        openAddPlanDialog()
+        composeRule.onNodeWithTag(UiTestTags.PLAN_EDITOR_REPEAT_MODE_INTERVAL_DAYS).performClick()
+
+        composeRule.onAllNodesWithTag(UiTestTags.PLAN_EDITOR_SELECT_START_DATE_BUTTON)
+            .assertCountEquals(1)
+        composeRule.onAllNodesWithTag(UiTestTags.PLAN_EDITOR_SELECTED_START_DATE)
+            .assertCountEquals(1)
     }
 
     @Test
