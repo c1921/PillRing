@@ -38,6 +38,9 @@
     <string name="msg_time_updated_reschedule_failed">Time saved, but failed to reschedule next trigger.</string>
     <string name="msg_reminder_stopped">Reminder stopped for this round.</string>
     <string name="msg_open_settings_failed">Unable to open settings for this item.</string>
+    <string name="msg_open_update_page_failed">Unable to open release page.</string>
+    <string name="msg_update_up_to_date">You\'re on the latest version.</string>
+    <string name="msg_update_check_failed">Failed to check updates. Please try again later.</string>
     <string name="msg_plan_limit_reached">You can add up to 10 plans.</string>
     <string name="msg_plan_name_required">Plan name is required.</string>
     <string name="msg_plan_save_failed">Failed to save this plan.</string>
@@ -86,6 +89,12 @@
     <string name="settings_permission_summary_all_ok">All permission checks are healthy</string>
     <string name="settings_permission_summary_needs_action">%1$d item(s) need action</string>
     <string name="settings_permission_summary_manual_check">%1$d item(s) need manual check</string>
+    <string name="settings_update_title">App update</string>
+    <string name="settings_update_summary_idle">Tap to check the latest version.</string>
+    <string name="settings_update_summary_checking">Checking for updates...</string>
+    <string name="settings_update_summary_available">Current %1$s, latest %2$s</string>
+    <string name="settings_update_summary_up_to_date">You\'re on the latest version</string>
+    <string name="settings_update_summary_failed">Last check failed. Tap to retry.</string>
 
     <string name="permission_health_title">Permission Health</string>
     <string name="permission_health_description">Check reminder-related permissions and open system settings when needed.</string>

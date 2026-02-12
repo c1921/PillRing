@@ -8,6 +8,8 @@ object UiTestTags {
     const val SETTINGS_LANGUAGE_ICON = "settings_language_icon"
     const val SETTINGS_PERMISSION_ITEM = "settings_permission_item"
     const val SETTINGS_PERMISSION_ICON = "settings_permission_icon"
+    const val SETTINGS_UPDATE_ITEM = "settings_update_item"
+    const val SETTINGS_UPDATE_ICON = "settings_update_icon"
     const val SETTINGS_ABOUT_ITEM = "settings_about_item"
     const val SETTINGS_ABOUT_ICON = "settings_about_icon"
     const val SETTINGS_PERMISSION_PAGE = "settings_permission_page"

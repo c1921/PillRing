@@ -5,6 +5,7 @@ import android.animation.ValueAnimator
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.net.Uri
 import android.os.Bundle
 import android.text.format.DateFormat
 import android.view.HapticFeedbackConstants
@@ -127,6 +128,9 @@ import io.github.c1921.pillring.permission.PermissionHealthChecker
 import io.github.c1921.pillring.permission.PermissionHealthItem
 import io.github.c1921.pillring.permission.PermissionSettingsNavigator
 import io.github.c1921.pillring.permission.PermissionState
+import io.github.c1921.pillring.update.AppUpdateRepository
+import io.github.c1921.pillring.update.UpdateStatus
+import io.github.c1921.pillring.update.UpdateUiState
 import io.github.c1921.pillring.ui.UiTestTags
 import io.github.c1921.pillring.ui.theme.PillRingTheme
 import java.time.LocalDateTime
@@ -208,6 +212,13 @@ class MainActivity : ComponentActivity() {
             var planEditorState by remember {
                 mutableStateOf<PlanEditorState?>(null)
             }
+            val updateRepository = remember {
+                AppUpdateRepository(this@MainActivity)
+            }
+            var updateUiState by remember {
+                mutableStateOf(updateRepository.getCachedUiState(BuildConfig.VERSION_NAME))
+            }
+            val mainScope = rememberCoroutineScope()
             val lifecycleOwner = LocalLifecycleOwner.current
 
             DisposableEffect(lifecycleOwner) {
@@ -225,6 +236,20 @@ class MainActivity : ComponentActivity() {
                 onDispose {
                     lifecycleOwner.lifecycle.removeObserver(observer)
                 }
+            }
+
+            LaunchedEffect(Unit) {
+                if (updateRepository.shouldSkipAutoCheck()) {
+                    updateUiState = updateRepository.getCachedUiState(BuildConfig.VERSION_NAME)
+                    return@LaunchedEffect
+                }
+
+                updateUiState = UpdateUiState.checking(BuildConfig.VERSION_NAME)
+                val checkResult = updateRepository.checkForUpdates(
+                    currentVersionName = BuildConfig.VERSION_NAME,
+                    force = false
+                )
+                updateUiState = UpdateUiState.fromResult(checkResult)
             }
 
             LaunchedEffect(pendingReminderConfirmPlanId, plans) {
@@ -341,10 +366,71 @@ class MainActivity : ComponentActivity() {
                             permissionItems = permissionItems,
                             selectedLanguage = selectedLanguage,
                             effectiveLanguageForSummary = effectiveLanguageForSummary,
+                            updateUiState = updateUiState,
                             appVersionName = BuildConfig.VERSION_NAME,
                             onBackClick = { currentScreen = AppScreen.HOME },
                             onLanguageClick = { currentScreen = AppScreen.SETTINGS_LANGUAGE },
                             onPermissionClick = { currentScreen = AppScreen.SETTINGS_PERMISSION },
+                            onUpdateClick = {
+                                when (updateUiState.status) {
+                                    UpdateStatus.CHECKING -> Unit
+                                    UpdateStatus.UPDATE_AVAILABLE -> {
+                                        val releaseUrl = updateUiState.releaseUrl
+                                            ?: AppUpdateRepository.DEFAULT_RELEASE_PAGE_URL
+                                        if (!openUpdateReleasePage(releaseUrl)) {
+                                            Toast.makeText(
+                                                this@MainActivity,
+                                                getString(R.string.msg_open_update_page_failed),
+                                                Toast.LENGTH_SHORT
+                                            ).show()
+                                        }
+                                    }
+
+                                    else -> {
+                                        mainScope.launch {
+                                            updateUiState =
+                                                UpdateUiState.checking(BuildConfig.VERSION_NAME)
+                                            val checkResult = updateRepository.checkForUpdates(
+                                                currentVersionName = BuildConfig.VERSION_NAME,
+                                                force = true
+                                            )
+                                            updateUiState = UpdateUiState.fromResult(checkResult)
+                                            when (checkResult.status) {
+                                                UpdateStatus.UPDATE_AVAILABLE -> {
+                                                    val releaseUrl = checkResult.releaseUrl
+                                                        ?: AppUpdateRepository.DEFAULT_RELEASE_PAGE_URL
+                                                    if (!openUpdateReleasePage(releaseUrl)) {
+                                                        Toast.makeText(
+                                                            this@MainActivity,
+                                                            getString(R.string.msg_open_update_page_failed),
+                                                            Toast.LENGTH_SHORT
+                                                        ).show()
+                                                    }
+                                                }
+
+                                                UpdateStatus.UP_TO_DATE -> {
+                                                    Toast.makeText(
+                                                        this@MainActivity,
+                                                        getString(R.string.msg_update_up_to_date),
+                                                        Toast.LENGTH_SHORT
+                                                    ).show()
+                                                }
+
+                                                UpdateStatus.FAILED -> {
+                                                    Toast.makeText(
+                                                        this@MainActivity,
+                                                        getString(R.string.msg_update_check_failed),
+                                                        Toast.LENGTH_SHORT
+                                                    ).show()
+                                                }
+
+                                                UpdateStatus.IDLE,
+                                                UpdateStatus.CHECKING -> Unit
+                                            }
+                                        }
+                                    }
+                                }
+                            },
                             onAboutClick = { currentScreen = AppScreen.SETTINGS_ABOUT }
                         )
                     }
@@ -766,6 +852,18 @@ class MainActivity : ComponentActivity() {
                 getString(R.string.msg_open_settings_failed),
                 Toast.LENGTH_SHORT
             ).show()
+        }
+    }
+
+    private fun openUpdateReleasePage(releaseUrl: String): Boolean {
+        val intent = Intent(Intent.ACTION_VIEW, Uri.parse(releaseUrl)).apply {
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        }
+        return try {
+            startActivity(intent)
+            true
+        } catch (_: Exception) {
+            false
         }
     }
 
@@ -1795,10 +1893,12 @@ private fun SettingsOverviewScreen(
     permissionItems: List<PermissionHealthItem>,
     selectedLanguage: AppLanguage,
     effectiveLanguageForSummary: AppLanguage,
+    updateUiState: UpdateUiState,
     appVersionName: String,
     onBackClick: () -> Unit,
     onLanguageClick: () -> Unit,
     onPermissionClick: () -> Unit,
+    onUpdateClick: () -> Unit,
     onAboutClick: () -> Unit
 ) {
     val languageSummary = languageSummaryText(
@@ -1806,6 +1906,7 @@ private fun SettingsOverviewScreen(
         effectiveLanguageForSummary = effectiveLanguageForSummary
     )
     val permissionSummary = permissionOverviewSummary(permissionItems)
+    val updateSummary = updateOverviewSummary(updateUiState)
     val aboutVersionName = appVersionName.ifBlank {
         stringResource(R.string.settings_about_version_unknown)
     }
@@ -1861,6 +1962,16 @@ private fun SettingsOverviewScreen(
                     testTag = UiTestTags.SETTINGS_PERMISSION_ITEM,
                     iconTestTag = UiTestTags.SETTINGS_PERMISSION_ICON,
                     onClick = onPermissionClick
+                )
+            }
+            item {
+                SettingsOverviewItem(
+                    title = stringResource(R.string.settings_update_title),
+                    summary = updateSummary,
+                    icon = Icons.Outlined.Settings,
+                    testTag = UiTestTags.SETTINGS_UPDATE_ITEM,
+                    iconTestTag = UiTestTags.SETTINGS_UPDATE_ICON,
+                    onClick = onUpdateClick
                 )
             }
             item {
@@ -2174,6 +2285,30 @@ private fun permissionOverviewSummary(items: List<PermissionHealthItem>): String
 }
 
 @Composable
+private fun updateOverviewSummary(updateUiState: UpdateUiState): String {
+    return when (updateUiState.status) {
+        UpdateStatus.IDLE -> stringResource(R.string.settings_update_summary_idle)
+        UpdateStatus.CHECKING -> stringResource(R.string.settings_update_summary_checking)
+        UpdateStatus.UPDATE_AVAILABLE -> {
+            val currentVersionName = updateUiState.currentVersionName.ifBlank {
+                stringResource(R.string.settings_about_version_unknown)
+            }
+            val latestVersionName = updateUiState.latestVersionName
+                ?.takeIf { it.isNotBlank() }
+                ?: stringResource(R.string.settings_about_version_unknown)
+            stringResource(
+                R.string.settings_update_summary_available,
+                currentVersionName,
+                latestVersionName
+            )
+        }
+
+        UpdateStatus.UP_TO_DATE -> stringResource(R.string.settings_update_summary_up_to_date)
+        UpdateStatus.FAILED -> stringResource(R.string.settings_update_summary_failed)
+    }
+}
+
+@Composable
 private fun LanguageOptionRow(
     text: String,
     selected: Boolean,
@@ -2376,10 +2511,18 @@ private fun SettingsOverviewScreenPreview() {
             ),
             selectedLanguage = AppLanguage.SYSTEM,
             effectiveLanguageForSummary = AppLanguage.ENGLISH,
+            updateUiState = UpdateUiState(
+                status = UpdateStatus.UPDATE_AVAILABLE,
+                currentVersionName = "0.1.0",
+                latestVersionName = "0.2.0",
+                releaseUrl = AppUpdateRepository.DEFAULT_RELEASE_PAGE_URL,
+                lastCheckedAtEpochMs = System.currentTimeMillis()
+            ),
             appVersionName = "1.0",
             onBackClick = {},
             onLanguageClick = {},
             onPermissionClick = {},
+            onUpdateClick = {},
             onAboutClick = {}
         )
     }

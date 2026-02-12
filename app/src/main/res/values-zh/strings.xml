@@ -38,6 +38,9 @@
     <string name="msg_time_updated_reschedule_failed">时间已保存，但重新安排下一次触发失败。</string>
     <string name="msg_reminder_stopped">本轮提醒已停止。</string>
     <string name="msg_open_settings_failed">无法打开该项的设置。</string>
+    <string name="msg_open_update_page_failed">无法打开发布页面。</string>
+    <string name="msg_update_up_to_date">当前已是最新版本。</string>
+    <string name="msg_update_check_failed">检查更新失败，请稍后重试。</string>
     <string name="msg_plan_limit_reached">最多可添加 10 个计划。</string>
     <string name="msg_plan_name_required">计划名称不能为空。</string>
     <string name="msg_plan_save_failed">保存计划失败。</string>
@@ -86,6 +89,12 @@
     <string name="settings_permission_summary_all_ok">全部权限项正常</string>
     <string name="settings_permission_summary_needs_action">%1$d 项需处理</string>
     <string name="settings_permission_summary_manual_check">%1$d 项需手动检查</string>
+    <string name="settings_update_title">版本更新</string>
+    <string name="settings_update_summary_idle">点击检查最新版本。</string>
+    <string name="settings_update_summary_checking">正在检查更新...</string>
+    <string name="settings_update_summary_available">当前 %1$s，最新 %2$s</string>
+    <string name="settings_update_summary_up_to_date">当前已是最新版本</string>
+    <string name="settings_update_summary_failed">上次检查失败，点击重试。</string>
 
     <string name="permission_health_title">权限健康检查</string>
     <string name="permission_health_description">检查提醒相关权限，并在需要时打开系统设置。</string>
