@@ -45,6 +45,21 @@ PillRing 是基于 Android + Jetpack Compose 的多计划吃药提醒应用。
 ./gradlew :app:installDebug
 ```
 
+## 本地质量门禁
+
+提交前建议执行以下检查，确保本地与仓库门禁一致：
+
+```powershell
+.\scripts\check-local.ps1
+```
+
+等价命令：
+
+```powershell
+.\gradlew.bat :app:testDebugUnitTest
+.\gradlew.bat :app:lintDebug
+```
+
 ## 使用说明
 
 1. 首次打开应用后，为确保正常使用，请在系统设置中授予应用所需各项权限（如通知权限、精确闹钟权限、电池优化相关设置与后台运行相关设置）。
@@ -61,12 +76,12 @@ PillRing 是基于 Android + Jetpack Compose 的多计划吃药提醒应用。
 
 ```text
 app/src/main/java/io/github/c1921/pillring/
-├── MainActivity.kt                # 主界面与页面导航、核心交互
+├── MainActivity.kt                # 入口 Activity（生命周期、页面状态与事件编排）
 ├── notification/                  # 提醒计划、闹钟调度、通知与广播接收
 ├── permission/                    # 权限健康检查与系统设置跳转
 ├── update/                        # 版本检查、缓存与版本比较逻辑
 ├── locale/                        # 应用语言选择与生效管理
-└── ui/                            # UI 测试标签与主题等
+└── ui/                            # Compose UI（home/plan/reminder/settings/common 等）
 ```
 
 测试目录：

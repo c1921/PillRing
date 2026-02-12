@@ -3,8 +3,8 @@ package io.github.c1921.pillring.permission
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
-import android.net.Uri
 import android.provider.Settings
+import androidx.core.net.toUri
 
 object PermissionSettingsNavigator {
     fun open(context: Context, action: PermissionAction): Boolean {
@@ -27,7 +27,7 @@ object PermissionSettingsNavigator {
 
     private fun openExactAlarmSettings(context: Context): Boolean {
         val intent = Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM).apply {
-            data = Uri.parse("package:${context.packageName}")
+            data = "package:${context.packageName}".toUri()
             addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         }
         return safeStartActivity(context, intent)
@@ -42,7 +42,7 @@ object PermissionSettingsNavigator {
 
     private fun openAppDetailsSettings(context: Context): Boolean {
         val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
-            data = Uri.parse("package:${context.packageName}")
+            data = "package:${context.packageName}".toUri()
             addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         }
         return safeStartActivity(context, intent)

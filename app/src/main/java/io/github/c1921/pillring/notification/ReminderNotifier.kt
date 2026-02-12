@@ -38,7 +38,12 @@ object ReminderNotifier {
         plan: ReminderPlan,
         reason: String
     ) {
-        if (!hasNotificationPermission(context)) {
+        if (
+            ContextCompat.checkSelfPermission(
+                context,
+                Manifest.permission.POST_NOTIFICATIONS
+            ) != PackageManager.PERMISSION_GRANTED
+        ) {
             return
         }
 
@@ -100,14 +105,19 @@ object ReminderNotifier {
         context: Context,
         plan: ReminderPlan
     ) {
-        NotificationManagerCompat.from(context).cancel(plan.notificationId)
-    }
-
-    private fun hasNotificationPermission(context: Context): Boolean {
-        return ContextCompat.checkSelfPermission(
-            context,
-            Manifest.permission.POST_NOTIFICATIONS
-        ) == PackageManager.PERMISSION_GRANTED
+        if (
+            ContextCompat.checkSelfPermission(
+                context,
+                Manifest.permission.POST_NOTIFICATIONS
+            ) != PackageManager.PERMISSION_GRANTED
+        ) {
+            return
+        }
+        try {
+            NotificationManagerCompat.from(context).cancel(plan.notificationId)
+        } catch (_: SecurityException) {
+            // Permission may be revoked at runtime between checks.
+        }
     }
 
     private fun requestCodeForDelete(plan: ReminderPlan): Int = plan.notificationId * 10 + 3

@@ -4,16 +4,11 @@ import android.app.AlarmManager
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
-import android.os.Build
 
 object ReminderScheduler {
     fun canScheduleExactAlarms(context: Context): Boolean {
         val alarmManager = context.getSystemService(AlarmManager::class.java)
-        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            alarmManager.canScheduleExactAlarms()
-        } else {
-            true
-        }
+        return alarmManager.canScheduleExactAlarms()
     }
 
     fun scheduleDailyAt(

@@ -1,166 +1,58 @@
-package io.github.c1921.pillring
+﻿package io.github.c1921.pillring
 
 import android.Manifest
-import android.animation.ValueAnimator
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
-import android.net.Uri
 import android.os.Bundle
-import android.text.format.DateFormat
-import android.view.HapticFeedbackConstants
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.animation.AnimatedContent
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.animateColor
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.slideOutVertically
-import androidx.compose.animation.core.Animatable
-import androidx.compose.animation.core.FastOutSlowInEasing
-import androidx.compose.animation.core.LinearEasing
-import androidx.compose.animation.core.LinearOutSlowInEasing
-import androidx.compose.animation.core.RepeatMode
-import androidx.compose.animation.core.Spring
-import androidx.compose.animation.core.animateDp
-import androidx.compose.animation.core.animateFloat
-import androidx.compose.animation.core.infiniteRepeatable
-import androidx.compose.animation.core.rememberInfiniteTransition
-import androidx.compose.animation.core.tween
-import androidx.compose.animation.core.updateTransition
-import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.gestures.detectTapGestures
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.itemsIndexed
-import androidx.compose.foundation.selection.selectable
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.MoreVert
-import androidx.compose.material.icons.outlined.Edit
-import androidx.compose.material.icons.outlined.Info
-import androidx.compose.material.icons.outlined.Language
-import androidx.compose.material.icons.outlined.Settings
-import androidx.compose.material.icons.outlined.VerifiedUser
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.DatePicker
-import androidx.compose.material3.DatePickerDialog
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.ElevatedCard
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.ExtendedFloatingActionButton
-import androidx.compose.material3.FilledTonalButton
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.RadioButton
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Surface
-import androidx.compose.material3.Switch
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
-import androidx.compose.material3.TimePicker
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.rememberDatePickerState
-import androidx.compose.material3.rememberTimePickerState
-import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.scale
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.StrokeCap
-import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.hapticfeedback.HapticFeedbackType
-import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.platform.LocalAccessibilityManager
-import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.LocalLifecycleOwner
-import androidx.compose.ui.platform.LocalView
-import androidx.compose.ui.platform.testTag
-import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.semantics.Role
-import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
+import androidx.core.net.toUri
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
-import io.github.c1921.pillring.notification.ReminderNotifier
 import io.github.c1921.pillring.notification.ReminderPlan
+import io.github.c1921.pillring.notification.PlanMutationFailureReason
+import io.github.c1921.pillring.notification.PlanMutationResult
+import io.github.c1921.pillring.notification.PlanMutationSuccessType
+import io.github.c1921.pillring.notification.ReminderPlanCoordinator
 import io.github.c1921.pillring.notification.ReminderRepeatMode
-import io.github.c1921.pillring.notification.ReminderScheduler
 import io.github.c1921.pillring.notification.ReminderContract
-import io.github.c1921.pillring.notification.ReminderSessionStore
-import io.github.c1921.pillring.notification.ReminderTimeCalculator
+import io.github.c1921.pillring.notification.ReminderScheduler
 import io.github.c1921.pillring.locale.AppLanguage
 import io.github.c1921.pillring.locale.AppLanguageManager
 import io.github.c1921.pillring.permission.PermissionAction
 import io.github.c1921.pillring.permission.PermissionHealthChecker
 import io.github.c1921.pillring.permission.PermissionHealthItem
 import io.github.c1921.pillring.permission.PermissionSettingsNavigator
-import io.github.c1921.pillring.permission.PermissionState
 import io.github.c1921.pillring.update.AppUpdateRepository
 import io.github.c1921.pillring.update.UpdateStatus
 import io.github.c1921.pillring.update.UpdateUiState
-import io.github.c1921.pillring.ui.UiTestTags
+import io.github.c1921.pillring.ui.home.ReminderHomeScreen
+import io.github.c1921.pillring.ui.plan.PlanEditorDialog
+import io.github.c1921.pillring.ui.reminder.ReminderConfirmScreen
+import io.github.c1921.pillring.ui.settings.AboutSettingsScreen
+import io.github.c1921.pillring.ui.settings.LanguageSettingsScreen
+import io.github.c1921.pillring.ui.settings.PermissionSettingsScreen
+import io.github.c1921.pillring.ui.settings.SettingsOverviewScreen
 import io.github.c1921.pillring.ui.theme.PillRingTheme
-import java.time.Instant
-import java.time.LocalDate
 import java.time.LocalDateTime
-import java.time.LocalTime
-import java.time.ZoneId
-import java.time.ZoneOffset
-import java.time.format.DateTimeFormatter
-import java.time.format.FormatStyle
-import java.util.Locale
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 private const val MAX_PLAN_NAME_LENGTH = 30
-private const val REMINDER_CONFIRM_HOLD_DURATION_MS = 1200
-private const val REMINDER_CONFIRM_RELEASE_ANIMATION_MS = 180
-private const val REMINDER_CONFIRM_COMPLETION_SETTLE_MS = 500L
-private const val REMINDER_CONFIRM_EXIT_ANIMATION_MS = 260
-private const val REMINDER_CONFIRM_EXIT_FADE_MS = 180
-private const val REMINDER_CONFIRM_HAPTIC_THRESHOLD_25 = 0.25f
-private const val REMINDER_CONFIRM_HAPTIC_THRESHOLD_50 = 0.50f
-private const val REMINDER_CONFIRM_HAPTIC_THRESHOLD_75 = 0.75f
 
 private enum class AppScreen {
     HOME,
@@ -169,13 +61,6 @@ private enum class AppScreen {
     SETTINGS_PERMISSION,
     SETTINGS_ABOUT,
     REMINDER_CONFIRM
-}
-
-private enum class HoldToConfirmState {
-    IDLE,
-    HOLDING,
-    COMPLETED,
-    EXITING
 }
 
 private data class PlanEditorState(
@@ -190,6 +75,9 @@ private data class PlanEditorState(
 
 class MainActivity : ComponentActivity() {
     private var pendingReminderConfirmPlanId: String? by mutableStateOf(null)
+    private val planCoordinator: ReminderPlanCoordinator by lazy {
+        ReminderPlanCoordinator(this)
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -370,9 +258,9 @@ class MainActivity : ComponentActivity() {
                     AppScreen.HOME -> {
                         ReminderHomeScreen(
                             plans = plans,
-                            maxPlans = ReminderSessionStore.MAX_PLAN_COUNT,
+                            maxPlans = planCoordinator.maxPlanCount,
                             onAddPlanClick = {
-                                if (plans.size >= ReminderSessionStore.MAX_PLAN_COUNT) {
+                                if (plans.size >= planCoordinator.maxPlanCount) {
                                     Toast.makeText(
                                         this@MainActivity,
                                         getString(R.string.msg_plan_limit_reached),
@@ -399,17 +287,11 @@ class MainActivity : ComponentActivity() {
                                 permissionItems = buildPermissionItems()
                             },
                             onMoveUpClick = { plan ->
-                                ReminderSessionStore.movePlanUp(
-                                    context = this@MainActivity,
-                                    planId = plan.id
-                                )
+                                planCoordinator.movePlanUp(plan.id)
                                 plans = loadPlans()
                             },
                             onMoveDownClick = { plan ->
-                                ReminderSessionStore.movePlanDown(
-                                    context = this@MainActivity,
-                                    planId = plan.id
-                                )
+                                planCoordinator.movePlanDown(plan.id)
                                 plans = loadPlans()
                             },
                             onPlanEnabledChange = { plan, enabled ->
@@ -594,7 +476,7 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun loadPlans(): List<ReminderPlan> {
-        return ReminderSessionStore.getPlans(this)
+        return planCoordinator.getPlans()
     }
 
     private fun buildDefaultPlanEditorState(nextIndex: Int): PlanEditorState {
@@ -656,7 +538,7 @@ class MainActivity : ComponentActivity() {
             ).show()
             return false
         }
-        if (loadPlans().size >= ReminderSessionStore.MAX_PLAN_COUNT) {
+        if (loadPlans().size >= planCoordinator.maxPlanCount) {
             Toast.makeText(
                 this,
                 getString(R.string.msg_plan_limit_reached),
@@ -668,47 +550,67 @@ class MainActivity : ComponentActivity() {
             return false
         }
 
-        val plan = try {
-            ReminderSessionStore.addPlan(
-                context = this,
-                name = name.trim(),
+        return when (
+            val result = planCoordinator.addPlan(
+                name = name,
                 hour = hour,
                 minute = minute,
-                enabled = true,
                 repeatMode = repeatMode,
                 intervalDays = intervalDays,
-                startDateEpochDay = startDateEpochDay
+                startDateEpochDay = startDateEpochDay,
+                scheduleReason = getString(R.string.reason_plan_enabled)
             )
-        } catch (_: Exception) {
-            Toast.makeText(
-                this,
-                getString(R.string.msg_plan_save_failed),
-                Toast.LENGTH_SHORT
-            ).show()
-            return false
-        }
+        ) {
+            is PlanMutationResult.Success -> {
+                val planName = result.planName ?: name.trim()
+                Toast.makeText(
+                    this,
+                    getString(R.string.msg_plan_added_enabled, planName),
+                    Toast.LENGTH_SHORT
+                ).show()
+                true
+            }
 
-        val scheduled = scheduleNextPlanReminder(
-            plan = plan,
-            reason = getString(R.string.reason_plan_enabled)
-        )
-        if (scheduled) {
-            Toast.makeText(
-                this,
-                getString(R.string.msg_plan_added_enabled, plan.name),
-                Toast.LENGTH_SHORT
-            ).show()
-            return true
-        }
+            is PlanMutationResult.Failure -> {
+                when (result.reason) {
+                    PlanMutationFailureReason.NAME_REQUIRED -> {
+                        Toast.makeText(
+                            this,
+                            getString(R.string.msg_plan_name_required),
+                            Toast.LENGTH_SHORT
+                        ).show()
+                    }
 
-        ReminderSessionStore.deletePlan(context = this, planId = plan.id)
-        Toast.makeText(
-            this,
-            getString(R.string.msg_exact_alarm_failed),
-            Toast.LENGTH_SHORT
-        ).show()
-        openPermissionSettings(PermissionAction.OPEN_EXACT_ALARM_SETTINGS)
-        return false
+                    PlanMutationFailureReason.PLAN_LIMIT_REACHED -> {
+                        Toast.makeText(
+                            this,
+                            getString(R.string.msg_plan_limit_reached),
+                            Toast.LENGTH_SHORT
+                        ).show()
+                    }
+
+                    PlanMutationFailureReason.SAVE_FAILED -> {
+                        Toast.makeText(
+                            this,
+                            getString(R.string.msg_plan_save_failed),
+                            Toast.LENGTH_SHORT
+                        ).show()
+                    }
+
+                    PlanMutationFailureReason.SCHEDULE_FAILED -> {
+                        Toast.makeText(
+                            this,
+                            getString(R.string.msg_exact_alarm_failed),
+                            Toast.LENGTH_SHORT
+                        ).show()
+                        openPermissionSettings(PermissionAction.OPEN_EXACT_ALARM_SETTINGS)
+                    }
+
+                    PlanMutationFailureReason.PLAN_NOT_FOUND -> Unit
+                }
+                false
+            }
+        }
     }
 
     private fun editPlan(
@@ -720,7 +622,7 @@ class MainActivity : ComponentActivity() {
         intervalDays: Int,
         startDateEpochDay: Long?
     ): Boolean {
-        val currentPlan = ReminderSessionStore.getPlan(this, planId) ?: return false
+        val currentPlan = planCoordinator.getPlans().firstOrNull { it.id == planId } ?: return false
         if (name.isBlank()) {
             Toast.makeText(
                 this,
@@ -729,161 +631,167 @@ class MainActivity : ComponentActivity() {
             ).show()
             return false
         }
-
-        val updatedPlan = currentPlan.copy(
-            name = name.trim(),
-            hour = hour,
-            minute = minute,
-            repeatMode = repeatMode,
-            intervalDays = intervalDays,
-            startDateEpochDay = startDateEpochDay
-        )
-
-        if (currentPlan.enabled) {
-            if (!ensureReminderSchedulingAllowed()) {
-                return false
-            }
-            val scheduled = scheduleNextPlanReminder(
-                plan = updatedPlan,
-                reason = getString(R.string.reason_time_updated)
-            )
-            if (!scheduled) {
-                Toast.makeText(
-                    this,
-                    getString(R.string.msg_time_updated_reschedule_failed),
-                    Toast.LENGTH_SHORT
-                ).show()
-                openPermissionSettings(PermissionAction.OPEN_EXACT_ALARM_SETTINGS)
-                return false
-            }
-            ReminderSessionStore.updatePlan(this, updatedPlan)
-            if (updatedPlan.isReminderActive) {
-                ReminderNotifier.showNotification(
-                    context = this,
-                    plan = updatedPlan,
-                    reason = getString(R.string.reason_time_updated)
-                )
-            }
-            Toast.makeText(
-                this,
-                getString(R.string.msg_time_updated_rescheduled),
-                Toast.LENGTH_SHORT
-            ).show()
-            return true
+        if (currentPlan.enabled && !ensureReminderSchedulingAllowed()) {
+            return false
         }
 
-        ReminderSessionStore.updatePlan(this, updatedPlan)
-        Toast.makeText(
-            this,
-            getString(R.string.msg_plan_updated),
-            Toast.LENGTH_SHORT
-        ).show()
-        return true
+        return when (
+            val result = planCoordinator.editPlan(
+                planId = planId,
+                name = name,
+                hour = hour,
+                minute = minute,
+                repeatMode = repeatMode,
+                intervalDays = intervalDays,
+                startDateEpochDay = startDateEpochDay,
+                scheduleReason = getString(R.string.reason_time_updated)
+            )
+        ) {
+            is PlanMutationResult.Success -> {
+                val toastMessage = if (currentPlan.enabled) {
+                    getString(R.string.msg_time_updated_rescheduled)
+                } else {
+                    getString(R.string.msg_plan_updated)
+                }
+                Toast.makeText(this, toastMessage, Toast.LENGTH_SHORT).show()
+                true
+            }
+
+            is PlanMutationResult.Failure -> {
+                when (result.reason) {
+                    PlanMutationFailureReason.NAME_REQUIRED -> {
+                        Toast.makeText(
+                            this,
+                            getString(R.string.msg_plan_name_required),
+                            Toast.LENGTH_SHORT
+                        ).show()
+                    }
+
+                    PlanMutationFailureReason.SCHEDULE_FAILED -> {
+                        Toast.makeText(
+                            this,
+                            getString(R.string.msg_time_updated_reschedule_failed),
+                            Toast.LENGTH_SHORT
+                        ).show()
+                        openPermissionSettings(PermissionAction.OPEN_EXACT_ALARM_SETTINGS)
+                    }
+
+                    PlanMutationFailureReason.SAVE_FAILED -> {
+                        Toast.makeText(
+                            this,
+                            getString(R.string.msg_plan_save_failed),
+                            Toast.LENGTH_SHORT
+                        ).show()
+                    }
+
+                    PlanMutationFailureReason.PLAN_LIMIT_REACHED,
+                    PlanMutationFailureReason.PLAN_NOT_FOUND -> Unit
+                }
+                false
+            }
+        }
     }
 
     private fun setPlanEnabled(
         planId: String,
         enabled: Boolean
     ): Boolean {
-        val plan = ReminderSessionStore.getPlan(this, planId) ?: return false
-        if (plan.enabled == enabled) {
-            return true
+        if (enabled && !ensureReminderSchedulingAllowed()) {
+            return false
         }
 
-        if (enabled) {
-            if (!ensureReminderSchedulingAllowed()) {
-                return false
-            }
-            val enabledPlan = plan.copy(enabled = true)
-            ReminderSessionStore.updatePlan(this, enabledPlan)
-            val scheduled = scheduleNextPlanReminder(
-                plan = enabledPlan,
-                reason = getString(R.string.reason_plan_enabled)
+        return when (
+            val result = planCoordinator.setPlanEnabled(
+                planId = planId,
+                enabled = enabled,
+                scheduleReason = getString(R.string.reason_plan_enabled)
             )
-            if (!scheduled) {
-                ReminderSessionStore.updatePlan(this, plan)
-                Toast.makeText(
-                    this,
-                    getString(R.string.msg_exact_alarm_failed),
-                    Toast.LENGTH_SHORT
-                ).show()
-                openPermissionSettings(PermissionAction.OPEN_EXACT_ALARM_SETTINGS)
-                return false
-            }
-            Toast.makeText(
-                this,
-                getString(R.string.msg_plan_enabled_name, plan.name),
-                Toast.LENGTH_SHORT
-            ).show()
-            return true
-        }
+        ) {
+            is PlanMutationResult.Success -> {
+                when (result.type) {
+                    PlanMutationSuccessType.ENABLED -> {
+                        val planName = result.planName ?: return false
+                        Toast.makeText(
+                            this,
+                            getString(R.string.msg_plan_enabled_name, planName),
+                            Toast.LENGTH_SHORT
+                        ).show()
+                    }
 
-        ReminderSessionStore.updatePlan(this, plan.copy(enabled = false))
-        ReminderSessionStore.markReminderConfirmed(this, plan.id)
-        ReminderScheduler.cancelPlanReminders(context = this, plan = plan)
-        ReminderNotifier.cancelReminderNotification(context = this, plan = plan)
-        Toast.makeText(
-            this,
-            getString(R.string.msg_plan_disabled_name, plan.name),
-            Toast.LENGTH_SHORT
-        ).show()
-        return true
+                    PlanMutationSuccessType.DISABLED -> {
+                        val planName = result.planName ?: return false
+                        Toast.makeText(
+                            this,
+                            getString(R.string.msg_plan_disabled_name, planName),
+                            Toast.LENGTH_SHORT
+                        ).show()
+                    }
+
+                    PlanMutationSuccessType.NO_OP -> Unit
+                    else -> Unit
+                }
+                true
+            }
+
+            is PlanMutationResult.Failure -> {
+                when (result.reason) {
+                    PlanMutationFailureReason.SCHEDULE_FAILED -> {
+                        Toast.makeText(
+                            this,
+                            getString(R.string.msg_exact_alarm_failed),
+                            Toast.LENGTH_SHORT
+                        ).show()
+                        openPermissionSettings(PermissionAction.OPEN_EXACT_ALARM_SETTINGS)
+                    }
+
+                    PlanMutationFailureReason.SAVE_FAILED -> {
+                        Toast.makeText(
+                            this,
+                            getString(R.string.msg_plan_save_failed),
+                            Toast.LENGTH_SHORT
+                        ).show()
+                    }
+
+                    PlanMutationFailureReason.NAME_REQUIRED,
+                    PlanMutationFailureReason.PLAN_LIMIT_REACHED,
+                    PlanMutationFailureReason.PLAN_NOT_FOUND -> Unit
+                }
+                false
+            }
+        }
     }
 
     private fun deletePlan(planId: String): Boolean {
-        val plan = ReminderSessionStore.getPlan(this, planId) ?: return false
-        ReminderSessionStore.deletePlan(context = this, planId = planId)
-        ReminderScheduler.cancelPlanReminders(context = this, plan = plan)
-        ReminderNotifier.cancelReminderNotification(context = this, plan = plan)
-        Toast.makeText(
-            this,
-            getString(R.string.msg_plan_deleted, plan.name),
-            Toast.LENGTH_SHORT
-        ).show()
-        return true
+        val result = planCoordinator.deletePlan(planId)
+        return if (result is PlanMutationResult.Success) {
+            val planName = result.planName ?: return false
+            Toast.makeText(
+                this,
+                getString(R.string.msg_plan_deleted, planName),
+                Toast.LENGTH_SHORT
+            ).show()
+            true
+        } else {
+            false
+        }
     }
 
     private fun confirmStopReminder(planId: String) {
-        val plan = ReminderSessionStore.getPlan(this, planId) ?: return
-        ReminderSessionStore.markReminderConfirmed(this, plan.id)
-        ReminderScheduler.cancelPlanFallbackReminder(context = this, plan = plan)
-        ReminderNotifier.cancelReminderNotification(context = this, plan = plan)
-        Toast.makeText(
-            this,
-            getString(R.string.msg_reminder_stopped_plan, plan.name),
-            Toast.LENGTH_SHORT
-        ).show()
-    }
-
-    private fun scheduleNextPlanReminder(
-        plan: ReminderPlan,
-        reason: String
-    ): Boolean {
-        val triggerAtMs = ReminderTimeCalculator.computeNextTriggerAtMs(
-            nowMs = System.currentTimeMillis(),
-            zoneId = ZoneId.systemDefault(),
-            plan = plan
-        )
-
-        return ReminderScheduler.scheduleDailyAt(
-            context = this,
-            plan = plan,
-            triggerAtMs = triggerAtMs,
-            reason = reason
-        )
+        val result = planCoordinator.confirmStopReminder(planId)
+        if (result is PlanMutationResult.Success) {
+            val planName = result.planName ?: return
+            Toast.makeText(
+                this,
+                getString(R.string.msg_reminder_stopped_plan, planName),
+                Toast.LENGTH_SHORT
+            ).show()
+        }
     }
 
     private fun rescheduleEnabledPlansSilently() {
-        val plans = loadPlans()
-        plans.forEach { plan ->
-            if (!plan.enabled) {
-                return@forEach
-            }
-            scheduleNextPlanReminder(
-                plan = plan,
-                reason = getString(R.string.reason_plan_enabled)
-            )
-        }
+        planCoordinator.rescheduleEnabledPlans(
+            reason = getString(R.string.reason_plan_enabled)
+        )
     }
 
     private fun buildPermissionItems(): List<PermissionHealthItem> {
@@ -902,7 +810,7 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun openUpdateReleasePage(releaseUrl: String): Boolean {
-        val intent = Intent(Intent.ACTION_VIEW, Uri.parse(releaseUrl)).apply {
+        val intent = Intent(Intent.ACTION_VIEW, releaseUrl.toUri()).apply {
             addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         }
         return try {
@@ -923,1965 +831,4 @@ class MainActivity : ComponentActivity() {
                 ).show()
             }
         }
-}
-
-@Composable
-@OptIn(ExperimentalMaterial3Api::class)
-private fun ReminderHomeScreen(
-    plans: List<ReminderPlan>,
-    maxPlans: Int,
-    onAddPlanClick: () -> Unit,
-    onEditPlanClick: (ReminderPlan) -> Unit,
-    onDeletePlanClick: (ReminderPlan) -> Unit,
-    onMoveUpClick: (ReminderPlan) -> Unit,
-    onMoveDownClick: (ReminderPlan) -> Unit,
-    onPlanEnabledChange: (ReminderPlan, Boolean) -> Unit,
-    onOpenSettingsClick: () -> Unit,
-    onOpenReminderConfirmFromPlanCard: (ReminderPlan) -> Unit
-) {
-    val canAddPlan = plans.size < maxPlans
-
-    Scaffold(
-        modifier = Modifier.fillMaxSize(),
-        topBar = {
-            TopAppBar(
-                title = {
-                    Text(
-                        text = stringResource(R.string.test_page_title),
-                        style = MaterialTheme.typography.titleLarge
-                    )
-                },
-                actions = {
-                    IconButton(
-                        onClick = onOpenSettingsClick,
-                        modifier = Modifier.testTag(UiTestTags.HOME_SETTINGS_BUTTON)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Outlined.Settings,
-                            contentDescription = stringResource(R.string.cd_open_settings)
-                        )
-                    }
-                }
-            )
-        },
-        floatingActionButton = {
-            ExtendedFloatingActionButton(
-                onClick = {
-                    if (canAddPlan) {
-                        onAddPlanClick()
-                    }
-                },
-                icon = {
-                    Icon(
-                        imageVector = Icons.Filled.Add,
-                        contentDescription = null
-                    )
-                },
-                text = {
-                    Text(text = stringResource(R.string.btn_add_plan))
-                },
-                containerColor = if (canAddPlan) {
-                    MaterialTheme.colorScheme.primaryContainer
-                } else {
-                    MaterialTheme.colorScheme.surfaceContainerHighest
-                },
-                contentColor = if (canAddPlan) {
-                    MaterialTheme.colorScheme.onPrimaryContainer
-                } else {
-                    MaterialTheme.colorScheme.onSurfaceVariant
-                },
-                modifier = Modifier.testTag(UiTestTags.HOME_ADD_PLAN_FAB)
-            )
-        }
-    ) { innerPadding ->
-        LazyColumn(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(innerPadding)
-                .padding(horizontal = 16.dp),
-            contentPadding = PaddingValues(top = 16.dp, bottom = 96.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            if (plans.isEmpty()) {
-                item {
-                    ElevatedCard(
-                        modifier = Modifier.fillMaxWidth(),
-                        colors = CardDefaults.elevatedCardColors(
-                            containerColor = MaterialTheme.colorScheme.surfaceContainerLow
-                        )
-                    ) {
-                        Column(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(16.dp),
-                            verticalArrangement = Arrangement.spacedBy(6.dp)
-                        ) {
-                            Text(
-                                text = stringResource(R.string.empty_plan_list),
-                                style = MaterialTheme.typography.titleSmall
-                            )
-                            Text(
-                                text = stringResource(R.string.btn_add_plan),
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                    }
-                }
-            } else {
-                itemsIndexed(
-                    items = plans,
-                    key = { _, plan -> plan.id }
-                ) { index, plan ->
-                    PlanCard(
-                        plan = plan,
-                        index = index,
-                        totalCount = plans.size,
-                        onCardClick = if (plan.isReminderActive) {
-                            {
-                                onOpenReminderConfirmFromPlanCard(plan)
-                            }
-                        } else {
-                            null
-                        },
-                        onEditClick = { onEditPlanClick(plan) },
-                        onDeleteClick = { onDeletePlanClick(plan) },
-                        onMoveUpClick = { onMoveUpClick(plan) },
-                        onMoveDownClick = { onMoveDownClick(plan) },
-                        onPlanEnabledChange = { enabled -> onPlanEnabledChange(plan, enabled) }
-                    )
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun PlanCard(
-    plan: ReminderPlan,
-    index: Int,
-    totalCount: Int,
-    onCardClick: (() -> Unit)?,
-    onEditClick: () -> Unit,
-    onDeleteClick: () -> Unit,
-    onMoveUpClick: () -> Unit,
-    onMoveDownClick: () -> Unit,
-    onPlanEnabledChange: (Boolean) -> Unit
-) {
-    val context = LocalContext.current
-    val timeText = remember(plan.hour, plan.minute, context) {
-        formatReminderTime(
-            context = context,
-            hour = plan.hour,
-            minute = plan.minute
-        )
-    }
-    val repeatSummaryText = remember(
-        plan.repeatMode,
-        plan.intervalDays,
-        plan.startDateEpochDay,
-        context
-    ) {
-        formatRepeatSummary(
-            context = context,
-            repeatMode = plan.repeatMode,
-            intervalDays = plan.intervalDays,
-            startDateEpochDay = plan.startDateEpochDay
-        )
-    }
-    var showMenu by rememberSaveable(plan.id) {
-        mutableStateOf(false)
-    }
-    val planStatusContainerColor = when {
-        plan.isReminderActive -> MaterialTheme.colorScheme.errorContainer
-        plan.enabled -> MaterialTheme.colorScheme.primaryContainer
-        else -> MaterialTheme.colorScheme.surfaceContainerHighest
-    }
-    val planStatusContentColor = when {
-        plan.isReminderActive -> MaterialTheme.colorScheme.onErrorContainer
-        plan.enabled -> MaterialTheme.colorScheme.onPrimaryContainer
-        else -> MaterialTheme.colorScheme.onSurfaceVariant
-    }
-    val planStatusResId = when {
-        plan.isReminderActive -> R.string.status_reminder_active
-        plan.enabled -> R.string.status_plan_enabled
-        else -> R.string.status_plan_disabled
-    }
-    val cardModifier = Modifier
-        .fillMaxWidth()
-        .testTag(UiTestTags.planCard(plan.id))
-        .then(
-            if (onCardClick != null) {
-                Modifier.clickable(onClick = onCardClick)
-            } else {
-                Modifier
-            }
-        )
-
-    ElevatedCard(
-        modifier = cardModifier,
-        colors = CardDefaults.elevatedCardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceContainerLow
-        )
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
-                verticalAlignment = Alignment.Top
-            ) {
-                Column(
-                    modifier = Modifier.weight(1f),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    Text(
-                        text = plan.name,
-                        style = MaterialTheme.typography.titleMedium
-                    )
-                    Text(
-                        text = stringResource(R.string.label_selected_time, timeText),
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    Text(
-                        text = repeatSummaryText,
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    Surface(
-                        shape = MaterialTheme.shapes.small,
-                        color = planStatusContainerColor
-                    ) {
-                        Text(
-                            text = stringResource(planStatusResId),
-                            style = MaterialTheme.typography.labelLarge,
-                            color = planStatusContentColor,
-                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp)
-                        )
-                    }
-                }
-                Column(
-                    horizontalAlignment = Alignment.End,
-                    verticalArrangement = Arrangement.spacedBy(4.dp)
-                ) {
-                    Switch(
-                        checked = plan.enabled,
-                        onCheckedChange = onPlanEnabledChange
-                    )
-                    Box {
-                        IconButton(
-                            onClick = { showMenu = true },
-                            modifier = Modifier.testTag(UiTestTags.PLAN_CARD_OVERFLOW_BUTTON)
-                        ) {
-                            Icon(
-                                imageVector = Icons.Filled.MoreVert,
-                                contentDescription = stringResource(R.string.cd_more_plan_actions)
-                            )
-                        }
-                        DropdownMenu(
-                            expanded = showMenu,
-                            onDismissRequest = { showMenu = false }
-                        ) {
-                            DropdownMenuItem(
-                                text = {
-                                    Text(text = stringResource(R.string.btn_move_up))
-                                },
-                                enabled = index > 0,
-                                onClick = {
-                                    showMenu = false
-                                    onMoveUpClick()
-                                },
-                                modifier = Modifier.testTag(UiTestTags.PLAN_CARD_ACTION_MOVE_UP)
-                            )
-                            DropdownMenuItem(
-                                text = {
-                                    Text(text = stringResource(R.string.btn_move_down))
-                                },
-                                enabled = index < totalCount - 1,
-                                onClick = {
-                                    showMenu = false
-                                    onMoveDownClick()
-                                },
-                                modifier = Modifier.testTag(UiTestTags.PLAN_CARD_ACTION_MOVE_DOWN)
-                            )
-                            DropdownMenuItem(
-                                text = {
-                                    Text(
-                                        text = stringResource(R.string.btn_delete_plan),
-                                        color = MaterialTheme.colorScheme.error
-                                    )
-                                },
-                                onClick = {
-                                    showMenu = false
-                                    onDeleteClick()
-                                },
-                                modifier = Modifier.testTag(UiTestTags.PLAN_CARD_ACTION_DELETE)
-                            )
-                        }
-                    }
-                }
-            }
-
-            FilledTonalButton(
-                onClick = onEditClick,
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Icon(
-                    imageVector = Icons.Outlined.Edit,
-                    contentDescription = null
-                )
-                Text(
-                    text = stringResource(R.string.btn_edit_plan),
-                    modifier = Modifier.padding(start = 8.dp)
-                )
-            }
-        }
-    }
-}
-
-@Composable
-@OptIn(ExperimentalMaterial3Api::class)
-private fun ReminderConfirmScreen(
-    plan: ReminderPlan,
-    onBackClick: () -> Unit,
-    onConfirmCommitted: () -> Unit,
-    onAutoExit: () -> Unit
-) {
-    val context = LocalContext.current
-    val accessibilityManager = LocalAccessibilityManager.current
-    val reducedMotion = remember {
-        !ValueAnimator.areAnimatorsEnabled()
-    }
-    val currentOnConfirmCommitted by rememberUpdatedState(onConfirmCommitted)
-    val currentOnAutoExit by rememberUpdatedState(onAutoExit)
-    val reminderTimeText = remember(plan.hour, plan.minute, context) {
-        formatReminderTime(
-            context = context,
-            hour = plan.hour,
-            minute = plan.minute
-        )
-    }
-    var holdState by remember {
-        mutableStateOf(HoldToConfirmState.IDLE)
-    }
-    var hasCommitted by remember {
-        mutableStateOf(false)
-    }
-    var isAutoExiting by remember {
-        mutableStateOf(false)
-    }
-    val hintState = if (isAutoExiting) {
-        HoldToConfirmState.EXITING
-    } else {
-        holdState
-    }
-    val exitAnimationMs = if (reducedMotion) {
-        REMINDER_CONFIRM_EXIT_FADE_MS
-    } else {
-        REMINDER_CONFIRM_EXIT_ANIMATION_MS
-    }
-
-    LaunchedEffect(hasCommitted) {
-        if (!hasCommitted) {
-            return@LaunchedEffect
-        }
-        val recommendedSettleMs = accessibilityManager
-            ?.calculateRecommendedTimeoutMillis(
-                originalTimeoutMillis = REMINDER_CONFIRM_COMPLETION_SETTLE_MS,
-                containsText = true,
-                containsControls = true
-            )
-            ?: REMINDER_CONFIRM_COMPLETION_SETTLE_MS
-        val settleMs = maxOf(REMINDER_CONFIRM_COMPLETION_SETTLE_MS, recommendedSettleMs)
-        delay(settleMs)
-        isAutoExiting = true
-        delay(exitAnimationMs.toLong())
-        currentOnAutoExit()
-    }
-
-    AnimatedVisibility(
-        visible = !isAutoExiting,
-        exit = slideOutVertically(
-            targetOffsetY = { fullHeight -> -fullHeight / 5 },
-            animationSpec = tween(
-                durationMillis = exitAnimationMs,
-                easing = FastOutSlowInEasing
-            )
-        ) + fadeOut(
-            animationSpec = tween(durationMillis = REMINDER_CONFIRM_EXIT_FADE_MS)
-        )
-    ) {
-        Scaffold(
-            modifier = Modifier
-                .fillMaxSize()
-                .testTag(UiTestTags.REMINDER_CONFIRM_SCREEN),
-            topBar = {
-                TopAppBar(
-                    title = {
-                        Text(
-                            text = stringResource(R.string.reminder_confirm_page_title),
-                            style = MaterialTheme.typography.titleLarge
-                        )
-                    },
-                    navigationIcon = {
-                        IconButton(onClick = onBackClick) {
-                            Icon(
-                                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                                contentDescription = stringResource(R.string.cd_navigate_back)
-                            )
-                        }
-                    }
-                )
-            }
-        ) { innerPadding ->
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(innerPadding)
-                    .padding(horizontal = 16.dp, vertical = 16.dp),
-                verticalArrangement = Arrangement.spacedBy(20.dp)
-            ) {
-                ElevatedCard(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .testTag(UiTestTags.REMINDER_CONFIRM_SECONDARY_CONTENT),
-                    colors = CardDefaults.elevatedCardColors(
-                        containerColor = MaterialTheme.colorScheme.surfaceContainerHigh
-                    )
-                ) {
-                    Column(
-                        modifier = Modifier.padding(16.dp),
-                        verticalArrangement = Arrangement.spacedBy(10.dp)
-                    ) {
-                        Text(
-                            text = stringResource(R.string.reminder_confirm_secondary_title),
-                            style = MaterialTheme.typography.titleMedium
-                        )
-                        Text(
-                            text = stringResource(R.string.reminder_confirm_plan_label, plan.name),
-                            style = MaterialTheme.typography.bodyLarge
-                        )
-                        Text(
-                            text = stringResource(R.string.reminder_confirm_time_label, reminderTimeText),
-                            style = MaterialTheme.typography.bodyLarge
-                        )
-                        Text(
-                            text = stringResource(R.string.reminder_confirm_long_press_description),
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                }
-
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .weight(1f),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.Center
-                ) {
-                    HoldToConfirmButton(
-                        text = stringResource(R.string.btn_reminder_hold_to_confirm),
-                        isAutoExiting = isAutoExiting,
-                        onConfirm = {
-                            if (hasCommitted) {
-                                return@HoldToConfirmButton
-                            }
-                            hasCommitted = true
-                            currentOnConfirmCommitted()
-                        },
-                        onStateChanged = { state ->
-                            holdState = state
-                        }
-                    )
-                    Spacer(modifier = Modifier.size(16.dp))
-                    AnimatedContent(
-                        targetState = hintState,
-                        label = "reminder_confirm_hold_hint"
-                    ) { state ->
-                        val textResId = when (state) {
-                            HoldToConfirmState.IDLE -> R.string.reminder_confirm_hold_hint_idle
-                            HoldToConfirmState.HOLDING -> R.string.reminder_confirm_hold_hint_holding
-                            HoldToConfirmState.COMPLETED,
-                            HoldToConfirmState.EXITING -> R.string.reminder_confirm_hold_hint_completed
-                        }
-                        Text(
-                            text = stringResource(textResId),
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            textAlign = TextAlign.Center,
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .testTag(UiTestTags.REMINDER_CONFIRM_HOLD_HINT)
-                        )
-                    }
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun HoldToConfirmButton(
-    text: String,
-    isAutoExiting: Boolean,
-    onConfirm: () -> Unit,
-    onStateChanged: (HoldToConfirmState) -> Unit
-) {
-    val view = LocalView.current
-    val hapticFeedback = LocalHapticFeedback.current
-    val coroutineScope = rememberCoroutineScope()
-    val currentOnConfirm by rememberUpdatedState(onConfirm)
-    val reducedMotion = remember {
-        !ValueAnimator.areAnimatorsEnabled()
-    }
-
-    val progress = remember {
-        Animatable(0f)
-    }
-    var holdState by remember {
-        mutableStateOf(HoldToConfirmState.IDLE)
-    }
-    var isHolding by remember {
-        mutableStateOf(false)
-    }
-    var hasConfirmed by remember {
-        mutableStateOf(false)
-    }
-    var progressJob by remember {
-        mutableStateOf<Job?>(null)
-    }
-    val visualState = when {
-        isAutoExiting && hasConfirmed -> HoldToConfirmState.EXITING
-        else -> holdState
-    }
-
-    LaunchedEffect(visualState) {
-        onStateChanged(visualState)
-    }
-
-    DisposableEffect(Unit) {
-        onDispose {
-            progressJob?.cancel()
-        }
-    }
-
-    fun performSemanticHaptic(
-        semanticConstant: Int,
-        fallbackType: HapticFeedbackType
-    ) {
-        val usedSemanticHaptic = view.performHapticFeedback(semanticConstant)
-        if (!usedSemanticHaptic) {
-            hapticFeedback.performHapticFeedback(fallbackType)
-        }
-    }
-
-    fun startHold() {
-        if (hasConfirmed || isAutoExiting) {
-            return
-        }
-        progressJob?.cancel()
-        isHolding = true
-        hasConfirmed = false
-        holdState = HoldToConfirmState.HOLDING
-        performSemanticHaptic(
-            semanticConstant = HapticFeedbackConstants.GESTURE_START,
-            fallbackType = HapticFeedbackType.LongPress
-        )
-
-        progressJob = coroutineScope.launch {
-            progress.snapTo(0f)
-            val thresholds = if (reducedMotion) {
-                emptyList()
-            } else {
-                listOf(
-                    REMINDER_CONFIRM_HAPTIC_THRESHOLD_25,
-                    REMINDER_CONFIRM_HAPTIC_THRESHOLD_50,
-                    REMINDER_CONFIRM_HAPTIC_THRESHOLD_75
-                )
-            }
-            var thresholdIndex = 0
-            progress.animateTo(
-                targetValue = 1f,
-                animationSpec = tween(
-                    durationMillis = REMINDER_CONFIRM_HOLD_DURATION_MS,
-                    easing = LinearEasing
-                )
-            ) {
-                if (thresholdIndex < thresholds.size && value >= thresholds[thresholdIndex]) {
-                    performSemanticHaptic(
-                        semanticConstant = HapticFeedbackConstants.SEGMENT_FREQUENT_TICK,
-                        fallbackType = HapticFeedbackType.TextHandleMove
-                    )
-                    thresholdIndex += 1
-                }
-            }
-            if (isHolding && !hasConfirmed) {
-                hasConfirmed = true
-                holdState = HoldToConfirmState.COMPLETED
-                performSemanticHaptic(
-                    semanticConstant = HapticFeedbackConstants.CONFIRM,
-                    fallbackType = HapticFeedbackType.LongPress
-                )
-                currentOnConfirm()
-            }
-        }
-    }
-
-    fun stopHold() {
-        if (!isHolding) {
-            return
-        }
-        isHolding = false
-        if (!hasConfirmed) {
-            if (holdState == HoldToConfirmState.HOLDING) {
-                performSemanticHaptic(
-                    semanticConstant = HapticFeedbackConstants.GESTURE_THRESHOLD_DEACTIVATE,
-                    fallbackType = HapticFeedbackType.TextHandleMove
-                )
-            }
-            progressJob?.cancel()
-            progressJob = null
-            coroutineScope.launch {
-                progress.animateTo(
-                    targetValue = 0f,
-                    animationSpec = tween(
-                        durationMillis = REMINDER_CONFIRM_RELEASE_ANIMATION_MS,
-                        easing = FastOutSlowInEasing
-                    )
-                )
-                holdState = HoldToConfirmState.IDLE
-            }
-        }
-    }
-
-    val stateTransition = updateTransition(
-        targetState = visualState,
-        label = "reminder_confirm_button_transition"
-    )
-    val buttonScale by stateTransition.animateFloat(
-        transitionSpec = {
-            if (reducedMotion) {
-                tween(durationMillis = 120, easing = LinearOutSlowInEasing)
-            } else {
-                androidx.compose.animation.core.spring(
-                    dampingRatio = Spring.DampingRatioMediumBouncy,
-                    stiffness = Spring.StiffnessMediumLow
-                )
-            }
-        },
-        label = "reminder_confirm_button_scale"
-    ) { state ->
-        when (state) {
-            HoldToConfirmState.IDLE -> 1f
-            HoldToConfirmState.HOLDING -> 0.94f
-            HoldToConfirmState.COMPLETED,
-            HoldToConfirmState.EXITING -> 1.02f
-        }
-    }
-    val buttonContainerColor by stateTransition.animateColor(
-        transitionSpec = { tween(durationMillis = 180) },
-        label = "reminder_confirm_button_container_color"
-    ) { state ->
-        when (state) {
-            HoldToConfirmState.IDLE -> MaterialTheme.colorScheme.primary
-            HoldToConfirmState.HOLDING -> MaterialTheme.colorScheme.primaryContainer
-            HoldToConfirmState.COMPLETED,
-            HoldToConfirmState.EXITING -> MaterialTheme.colorScheme.secondaryContainer
-        }
-    }
-    val buttonContentColor by stateTransition.animateColor(
-        transitionSpec = { tween(durationMillis = 180) },
-        label = "reminder_confirm_button_content_color"
-    ) { state ->
-        when (state) {
-            HoldToConfirmState.IDLE -> MaterialTheme.colorScheme.onPrimary
-            HoldToConfirmState.HOLDING -> MaterialTheme.colorScheme.onPrimaryContainer
-            HoldToConfirmState.COMPLETED,
-            HoldToConfirmState.EXITING -> MaterialTheme.colorScheme.onSecondaryContainer
-        }
-    }
-    val progressColor by stateTransition.animateColor(
-        transitionSpec = { tween(durationMillis = 180) },
-        label = "reminder_confirm_progress_color"
-    ) { state ->
-        when (state) {
-            HoldToConfirmState.IDLE,
-            HoldToConfirmState.HOLDING -> MaterialTheme.colorScheme.primary
-            HoldToConfirmState.COMPLETED,
-            HoldToConfirmState.EXITING -> MaterialTheme.colorScheme.secondary
-        }
-    }
-    val progressTrackColor by stateTransition.animateColor(
-        transitionSpec = { tween(durationMillis = 180) },
-        label = "reminder_confirm_progress_track_color"
-    ) { state ->
-        when (state) {
-            HoldToConfirmState.HOLDING -> MaterialTheme.colorScheme.surfaceContainerHigh
-            HoldToConfirmState.IDLE,
-            HoldToConfirmState.COMPLETED,
-            HoldToConfirmState.EXITING -> MaterialTheme.colorScheme.surfaceContainerHighest
-        }
-    }
-    val buttonShadowElevation by stateTransition.animateDp(
-        transitionSpec = { tween(durationMillis = 180) },
-        label = "reminder_confirm_button_shadow_elevation"
-    ) { state ->
-        when (state) {
-            HoldToConfirmState.IDLE -> 8.dp
-            HoldToConfirmState.HOLDING -> 2.dp
-            HoldToConfirmState.COMPLETED,
-            HoldToConfirmState.EXITING -> 4.dp
-        }
-    }
-    val buttonTonalElevation by stateTransition.animateDp(
-        transitionSpec = { tween(durationMillis = 180) },
-        label = "reminder_confirm_button_tonal_elevation"
-    ) { state ->
-        when (state) {
-            HoldToConfirmState.IDLE -> 8.dp
-            HoldToConfirmState.HOLDING -> 2.dp
-            HoldToConfirmState.COMPLETED,
-            HoldToConfirmState.EXITING -> 4.dp
-        }
-    }
-
-    val haloTransition = rememberInfiniteTransition(label = "reminder_confirm_halo")
-    val haloScale by haloTransition.animateFloat(
-        initialValue = 1f,
-        targetValue = 1.08f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(durationMillis = 900, easing = LinearOutSlowInEasing),
-            repeatMode = RepeatMode.Reverse
-        ),
-        label = "reminder_confirm_halo_scale"
-    )
-    val haloAlpha by haloTransition.animateFloat(
-        initialValue = 0.06f,
-        targetValue = 0.16f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(durationMillis = 900, easing = LinearOutSlowInEasing),
-            repeatMode = RepeatMode.Reverse
-        ),
-        label = "reminder_confirm_halo_alpha"
-    )
-    val showHalo = visualState == HoldToConfirmState.HOLDING && !reducedMotion
-    val canReceivePress = !hasConfirmed && !isAutoExiting
-    val pressModifier = if (canReceivePress) {
-        Modifier.pointerInput(isAutoExiting) {
-            detectTapGestures(
-                onPress = {
-                    startHold()
-                    tryAwaitRelease()
-                    stopHold()
-                }
-            )
-        }
-    } else {
-        Modifier
-    }
-
-    Box(
-        modifier = Modifier.size(140.dp),
-        contentAlignment = Alignment.Center
-    ) {
-        Box(
-            modifier = Modifier
-                .size(126.dp)
-                .scale(if (showHalo) haloScale else 1f)
-                .background(
-                    color = MaterialTheme.colorScheme.primary.copy(
-                        alpha = if (showHalo) haloAlpha else 0f
-                    ),
-                    shape = CircleShape
-                )
-        )
-        CircularProgressIndicator(
-            progress = {
-                progress.value
-            },
-            modifier = Modifier
-                .fillMaxSize()
-                .testTag(UiTestTags.REMINDER_CONFIRM_HOLD_PROGRESS),
-            color = progressColor,
-            trackColor = progressTrackColor,
-            strokeWidth = 8.dp,
-            strokeCap = StrokeCap.Round
-        )
-        Surface(
-            modifier = Modifier
-                .size(112.dp)
-                .scale(buttonScale)
-                .testTag(UiTestTags.REMINDER_CONFIRM_PRIMARY_BUTTON)
-                .then(pressModifier),
-            shape = CircleShape,
-            color = buttonContainerColor,
-            shadowElevation = buttonShadowElevation,
-            tonalElevation = buttonTonalElevation
-        ) {
-            Box(
-                modifier = Modifier.fillMaxSize(),
-                contentAlignment = Alignment.Center
-            ) {
-                AnimatedContent(
-                    targetState = visualState,
-                    label = "reminder_confirm_button_content"
-                ) { state ->
-                    if (state == HoldToConfirmState.COMPLETED || state == HoldToConfirmState.EXITING) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Icon(
-                                imageVector = Icons.Outlined.VerifiedUser,
-                                contentDescription = null,
-                                tint = buttonContentColor,
-                                modifier = Modifier.size(18.dp)
-                            )
-                            Spacer(modifier = Modifier.width(6.dp))
-                            Text(
-                                text = text,
-                                style = MaterialTheme.typography.labelLarge,
-                                color = buttonContentColor,
-                                textAlign = TextAlign.Center
-                            )
-                        }
-                    } else {
-                        Text(
-                            text = text,
-                            style = MaterialTheme.typography.labelLarge,
-                            color = buttonContentColor,
-                            textAlign = TextAlign.Center,
-                            modifier = Modifier.padding(horizontal = 12.dp)
-                        )
-                    }
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun PlanEditorDialog(
-    planId: String?,
-    initialName: String,
-    initialHour: Int,
-    initialMinute: Int,
-    initialRepeatMode: ReminderRepeatMode,
-    initialIntervalDays: Int,
-    initialStartDateEpochDay: Long?,
-    maxNameLength: Int,
-    onDismiss: () -> Unit,
-    onSave: (String, Int, Int, ReminderRepeatMode, Int, Long?) -> Unit
-) {
-    val todayEpochDay = remember {
-        LocalDate.now(ZoneId.systemDefault()).toEpochDay()
-    }
-    var name by rememberSaveable(initialName, planId) {
-        mutableStateOf(initialName)
-    }
-    var hour by rememberSaveable(initialHour, planId) {
-        mutableStateOf(initialHour)
-    }
-    var minute by rememberSaveable(initialMinute, planId) {
-        mutableStateOf(initialMinute)
-    }
-    var repeatMode by rememberSaveable(initialRepeatMode, planId) {
-        mutableStateOf(initialRepeatMode)
-    }
-    var intervalDaysInput by rememberSaveable(initialIntervalDays, planId) {
-        mutableStateOf(initialIntervalDays.toString())
-    }
-    var startDateEpochDay by rememberSaveable(initialStartDateEpochDay, planId) {
-        mutableStateOf(initialStartDateEpochDay)
-    }
-    var showTimePicker by rememberSaveable(planId) {
-        mutableStateOf(false)
-    }
-    var showStartDatePicker by rememberSaveable(planId) {
-        mutableStateOf(false)
-    }
-    val context = LocalContext.current
-    val selectedTimeText = remember(hour, minute, context) {
-        formatReminderTime(
-            context = context,
-            hour = hour,
-            minute = minute
-        )
-    }
-    val intervalDays = intervalDaysInput.toIntOrNull()
-    val isIntervalDaysValid = intervalDays in 1..365
-    val requiresIntervalConfig = repeatMode == ReminderRepeatMode.INTERVAL_DAYS
-    val selectedStartDateText = remember(startDateEpochDay) {
-        startDateEpochDay?.let { formatReminderDate(LocalDate.ofEpochDay(it)) }
-    }
-    val canSave = name.trim().isNotEmpty() && (
-        !requiresIntervalConfig || (isIntervalDaysValid && startDateEpochDay != null)
-    )
-
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = {
-            Text(
-                text = stringResource(
-                    if (planId == null) {
-                        R.string.dialog_add_plan_title
-                    } else {
-                        R.string.dialog_edit_plan_title
-                    }
-                )
-            )
-        },
-        text = {
-            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                OutlinedTextField(
-                    value = name,
-                    onValueChange = { changed ->
-                        if (changed.length <= maxNameLength) {
-                            name = changed
-                        }
-                    },
-                    label = { Text(stringResource(R.string.label_plan_name)) },
-                    supportingText = {
-                        Text(
-                            text = stringResource(
-                                R.string.label_name_length,
-                                name.length,
-                                maxNameLength
-                            )
-                        )
-                    },
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth()
-                )
-                PickerValueButton(
-                    text = stringResource(R.string.label_selected_time, selectedTimeText),
-                    onClick = {
-                        showTimePicker = true
-                    },
-                    buttonTestTag = UiTestTags.PLAN_EDITOR_SELECT_TIME_BUTTON,
-                    valueTextTestTag = UiTestTags.PLAN_EDITOR_SELECTED_TIME
-                )
-                Text(
-                    text = stringResource(R.string.label_repeat_mode),
-                    style = MaterialTheme.typography.labelLarge
-                )
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .selectable(
-                            selected = repeatMode == ReminderRepeatMode.DAILY,
-                            onClick = {
-                                repeatMode = ReminderRepeatMode.DAILY
-                            },
-                            role = Role.RadioButton
-                        )
-                        .testTag(UiTestTags.PLAN_EDITOR_REPEAT_MODE_DAILY),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    RadioButton(
-                        selected = repeatMode == ReminderRepeatMode.DAILY,
-                        onClick = null
-                    )
-                    Text(
-                        text = stringResource(R.string.option_repeat_daily),
-                        style = MaterialTheme.typography.bodyLarge
-                    )
-                }
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .selectable(
-                            selected = repeatMode == ReminderRepeatMode.INTERVAL_DAYS,
-                            onClick = {
-                                repeatMode = ReminderRepeatMode.INTERVAL_DAYS
-                                if (startDateEpochDay == null) {
-                                    startDateEpochDay = todayEpochDay
-                                }
-                            },
-                            role = Role.RadioButton
-                        )
-                        .testTag(UiTestTags.PLAN_EDITOR_REPEAT_MODE_INTERVAL_DAYS),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    RadioButton(
-                        selected = repeatMode == ReminderRepeatMode.INTERVAL_DAYS,
-                        onClick = null
-                    )
-                    Text(
-                        text = stringResource(R.string.option_repeat_interval_days),
-                        style = MaterialTheme.typography.bodyLarge
-                    )
-                }
-
-                if (repeatMode == ReminderRepeatMode.INTERVAL_DAYS) {
-                    OutlinedTextField(
-                        value = intervalDaysInput,
-                        onValueChange = { changed ->
-                            if (changed.length <= 3 && changed.all { it.isDigit() }) {
-                                intervalDaysInput = changed
-                            }
-                        },
-                        label = { Text(stringResource(R.string.label_interval_days)) },
-                        supportingText = {
-                            Text(text = stringResource(R.string.label_interval_days_supporting))
-                        },
-                        singleLine = true,
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                        isError = intervalDaysInput.isNotEmpty() && !isIntervalDaysValid,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .testTag(UiTestTags.PLAN_EDITOR_INTERVAL_DAYS_INPUT)
-                    )
-                    val startDateLabel = selectedStartDateText
-                        ?: stringResource(R.string.label_start_date_not_selected)
-                    PickerValueButton(
-                        text = stringResource(R.string.label_selected_start_date, startDateLabel),
-                        onClick = {
-                            showStartDatePicker = true
-                        },
-                        buttonTestTag = UiTestTags.PLAN_EDITOR_SELECT_START_DATE_BUTTON,
-                        valueTextTestTag = UiTestTags.PLAN_EDITOR_SELECTED_START_DATE
-                    )
-                }
-            }
-        },
-        confirmButton = {
-            Button(
-                onClick = {
-                    onSave(
-                        name.trim(),
-                        hour,
-                        minute,
-                        repeatMode,
-                        if (repeatMode == ReminderRepeatMode.INTERVAL_DAYS) {
-                            requireNotNull(intervalDays)
-                        } else {
-                            1
-                        },
-                        if (repeatMode == ReminderRepeatMode.INTERVAL_DAYS) {
-                            startDateEpochDay
-                        } else {
-                            null
-                        }
-                    )
-                },
-                enabled = canSave
-            ) {
-                Text(text = stringResource(R.string.dialog_btn_save))
-            }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text(text = stringResource(R.string.dialog_btn_cancel))
-            }
-        }
-    )
-
-    if (showTimePicker) {
-        PlanTimePickerDialog(
-            initialHour = hour,
-            initialMinute = minute,
-            is24Hour = DateFormat.is24HourFormat(context),
-            onDismiss = {
-                showTimePicker = false
-            },
-            onConfirm = { selectedHour, selectedMinute ->
-                hour = selectedHour
-                minute = selectedMinute
-                showTimePicker = false
-            }
-        )
-    }
-
-    if (showStartDatePicker) {
-        PlanStartDatePickerDialog(
-            initialStartDateEpochDay = startDateEpochDay ?: todayEpochDay,
-            onDismiss = {
-                showStartDatePicker = false
-            },
-            onConfirm = { selectedEpochDay ->
-                startDateEpochDay = selectedEpochDay
-                showStartDatePicker = false
-            }
-        )
-    }
-}
-
-@Composable
-private fun PickerValueButton(
-    text: String,
-    onClick: () -> Unit,
-    buttonTestTag: String,
-    valueTextTestTag: String
-) {
-    FilledTonalButton(
-        onClick = onClick,
-        modifier = Modifier
-            .fillMaxWidth()
-            .testTag(buttonTestTag)
-    ) {
-        Text(
-            text = text,
-            modifier = Modifier.testTag(valueTextTestTag)
-        )
-    }
-}
-
-@Composable
-@OptIn(ExperimentalMaterial3Api::class)
-private fun PlanTimePickerDialog(
-    initialHour: Int,
-    initialMinute: Int,
-    is24Hour: Boolean,
-    onDismiss: () -> Unit,
-    onConfirm: (Int, Int) -> Unit
-) {
-    val pickerState = rememberTimePickerState(
-        initialHour = initialHour,
-        initialMinute = initialMinute,
-        is24Hour = is24Hour
-    )
-
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = {
-            Text(text = stringResource(R.string.btn_select_time))
-        },
-        text = {
-            TimePicker(
-                state = pickerState,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .testTag(UiTestTags.PLAN_TIME_PICKER)
-            )
-        },
-        confirmButton = {
-            TextButton(
-                onClick = {
-                    onConfirm(pickerState.hour, pickerState.minute)
-                },
-                modifier = Modifier.testTag(UiTestTags.PLAN_TIME_PICKER_CONFIRM)
-            ) {
-                Text(text = stringResource(R.string.dialog_btn_save))
-            }
-        },
-        dismissButton = {
-            TextButton(
-                onClick = onDismiss,
-                modifier = Modifier.testTag(UiTestTags.PLAN_TIME_PICKER_CANCEL)
-            ) {
-                Text(text = stringResource(R.string.dialog_btn_cancel))
-            }
-        }
-    )
-}
-
-@Composable
-@OptIn(ExperimentalMaterial3Api::class)
-private fun PlanStartDatePickerDialog(
-    initialStartDateEpochDay: Long,
-    onDismiss: () -> Unit,
-    onConfirm: (Long) -> Unit
-) {
-    val pickerState = rememberDatePickerState(
-        initialSelectedDateMillis = LocalDate.ofEpochDay(initialStartDateEpochDay)
-            .atStartOfDay()
-            .toInstant(ZoneOffset.UTC)
-            .toEpochMilli()
-    )
-
-    DatePickerDialog(
-        onDismissRequest = onDismiss,
-        confirmButton = {
-            TextButton(
-                onClick = {
-                    val selectedDateMillis = pickerState.selectedDateMillis ?: return@TextButton
-                    val selectedEpochDay = Instant.ofEpochMilli(selectedDateMillis)
-                        .atOffset(ZoneOffset.UTC)
-                        .toLocalDate()
-                        .toEpochDay()
-                    onConfirm(selectedEpochDay)
-                },
-                modifier = Modifier.testTag(UiTestTags.PLAN_START_DATE_PICKER_CONFIRM)
-            ) {
-                Text(text = stringResource(R.string.dialog_btn_save))
-            }
-        },
-        dismissButton = {
-            TextButton(
-                onClick = onDismiss,
-                modifier = Modifier.testTag(UiTestTags.PLAN_START_DATE_PICKER_CANCEL)
-            ) {
-                Text(text = stringResource(R.string.dialog_btn_cancel))
-            }
-        }
-    ) {
-        DatePicker(
-            state = pickerState,
-            modifier = Modifier.testTag(UiTestTags.PLAN_START_DATE_PICKER)
-        )
-    }
-}
-
-private fun formatReminderTime(
-    context: Context,
-    hour: Int,
-    minute: Int
-): String {
-    val pattern = if (DateFormat.is24HourFormat(context)) "HH:mm" else "h:mm a"
-    val formatter = DateTimeFormatter.ofPattern(pattern, Locale.getDefault())
-    return LocalTime.of(hour, minute).format(formatter)
-}
-
-private fun formatRepeatSummary(
-    context: Context,
-    repeatMode: ReminderRepeatMode,
-    intervalDays: Int,
-    startDateEpochDay: Long?
-): String {
-    return when (repeatMode) {
-        ReminderRepeatMode.DAILY -> context.getString(R.string.label_repeat_summary_daily)
-        ReminderRepeatMode.INTERVAL_DAYS -> {
-            if (intervalDays !in 1..365 || startDateEpochDay == null) {
-                context.getString(R.string.label_repeat_summary_daily)
-            } else {
-                context.getString(
-                    R.string.label_repeat_summary_interval,
-                    intervalDays,
-                    formatReminderDate(LocalDate.ofEpochDay(startDateEpochDay))
-                )
-            }
-        }
-    }
-}
-
-private fun formatReminderDate(date: LocalDate): String {
-    val formatter = DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM)
-        .withLocale(Locale.getDefault())
-    return date.format(formatter)
-}
-
-@Composable
-@OptIn(ExperimentalMaterial3Api::class)
-private fun SettingsOverviewScreen(
-    permissionItems: List<PermissionHealthItem>,
-    selectedLanguage: AppLanguage,
-    effectiveLanguageForSummary: AppLanguage,
-    appVersionName: String,
-    onBackClick: () -> Unit,
-    onLanguageClick: () -> Unit,
-    onPermissionClick: () -> Unit,
-    onAboutClick: () -> Unit
-) {
-    val languageSummary = languageSummaryText(
-        selectedLanguage = selectedLanguage,
-        effectiveLanguageForSummary = effectiveLanguageForSummary
-    )
-    val permissionSummary = permissionOverviewSummary(permissionItems)
-    val aboutVersionName = appVersionName.ifBlank {
-        stringResource(R.string.settings_about_version_unknown)
-    }
-    val aboutSummary = stringResource(R.string.settings_about_summary, aboutVersionName)
-
-    Scaffold(
-        modifier = Modifier.fillMaxSize(),
-        topBar = {
-            TopAppBar(
-                title = {
-                    Text(
-                        text = stringResource(R.string.settings_page_title),
-                        style = MaterialTheme.typography.titleLarge
-                    )
-                },
-                navigationIcon = {
-                    IconButton(
-                        onClick = onBackClick,
-                        modifier = Modifier.testTag(UiTestTags.SETTINGS_BACK_BUTTON)
-                    ) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = stringResource(R.string.cd_navigate_back)
-                        )
-                    }
-                }
-            )
-        }
-    ) { innerPadding ->
-        LazyColumn(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(innerPadding)
-                .padding(horizontal = 16.dp),
-            contentPadding = PaddingValues(top = 16.dp, bottom = 24.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            item {
-                SettingsOverviewItem(
-                    title = stringResource(R.string.settings_language_title),
-                    summary = languageSummary,
-                    icon = Icons.Outlined.Language,
-                    testTag = UiTestTags.SETTINGS_LANGUAGE_ITEM,
-                    iconTestTag = UiTestTags.SETTINGS_LANGUAGE_ICON,
-                    onClick = onLanguageClick
-                )
-            }
-            item {
-                SettingsOverviewItem(
-                    title = stringResource(R.string.permission_health_title),
-                    summary = permissionSummary,
-                    icon = Icons.Outlined.VerifiedUser,
-                    testTag = UiTestTags.SETTINGS_PERMISSION_ITEM,
-                    iconTestTag = UiTestTags.SETTINGS_PERMISSION_ICON,
-                    onClick = onPermissionClick
-                )
-            }
-            item {
-                SettingsOverviewItem(
-                    title = stringResource(R.string.settings_about_title),
-                    summary = aboutSummary,
-                    icon = Icons.Outlined.Info,
-                    testTag = UiTestTags.SETTINGS_ABOUT_ITEM,
-                    iconTestTag = UiTestTags.SETTINGS_ABOUT_ICON,
-                    onClick = onAboutClick
-                )
-            }
-        }
-    }
-}
-
-@Composable
-private fun SettingsOverviewItem(
-    title: String,
-    summary: String,
-    icon: ImageVector,
-    testTag: String,
-    iconTestTag: String,
-    onClick: () -> Unit
-) {
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .testTag(testTag)
-            .clickable(onClick = onClick),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceContainerHigh
-        )
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Icon(
-                imageVector = icon,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.testTag(iconTestTag)
-            )
-            Spacer(modifier = Modifier.width(12.dp))
-            Column(
-                modifier = Modifier.weight(1f),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                Text(
-                    text = title,
-                    style = MaterialTheme.typography.titleMedium
-                )
-                Text(
-                    text = summary,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-        }
-    }
-}
-
-@Composable
-@OptIn(ExperimentalMaterial3Api::class)
-private fun AboutSettingsScreen(
-    appVersionName: String,
-    updateUiState: UpdateUiState,
-    onUpdateClick: () -> Unit,
-    onBackClick: () -> Unit
-) {
-    val aboutVersionName = appVersionName.ifBlank {
-        stringResource(R.string.settings_about_version_unknown)
-    }
-    val updateSummary = updateOverviewSummary(updateUiState)
-    val updateActionLabelResId = when (updateUiState.status) {
-        UpdateStatus.CHECKING -> R.string.settings_update_action_checking
-        UpdateStatus.UPDATE_AVAILABLE -> R.string.settings_update_action_open_release
-        UpdateStatus.IDLE,
-        UpdateStatus.UP_TO_DATE,
-        UpdateStatus.FAILED -> R.string.settings_update_action_check_now
-    }
-    val updateActionEnabled = updateUiState.status != UpdateStatus.CHECKING
-
-    Scaffold(
-        modifier = Modifier
-            .fillMaxSize()
-            .testTag(UiTestTags.SETTINGS_ABOUT_PAGE),
-        topBar = {
-            TopAppBar(
-                title = {
-                    Text(
-                        text = stringResource(R.string.settings_about_title),
-                        style = MaterialTheme.typography.titleLarge
-                    )
-                },
-                navigationIcon = {
-                    IconButton(
-                        onClick = onBackClick,
-                        modifier = Modifier.testTag(UiTestTags.SETTINGS_BACK_BUTTON)
-                    ) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = stringResource(R.string.cd_navigate_back)
-                        )
-                    }
-                }
-            )
-        }
-    ) { innerPadding ->
-        LazyColumn(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(innerPadding)
-                .padding(horizontal = 16.dp),
-            contentPadding = PaddingValues(top = 16.dp, bottom = 24.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            item {
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.surfaceContainerHigh
-                    )
-                ) {
-                    Column(
-                        modifier = Modifier.padding(16.dp),
-                        verticalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        Text(
-                            text = stringResource(R.string.settings_about_version_label),
-                            style = MaterialTheme.typography.titleMedium
-                        )
-                        Text(
-                            text = aboutVersionName,
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.testTag(UiTestTags.SETTINGS_ABOUT_VERSION_VALUE)
-                        )
-                    }
-                }
-            }
-            item {
-                Card(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .testTag(UiTestTags.SETTINGS_ABOUT_UPDATE_CARD),
-                    colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.surfaceContainerHigh
-                    )
-                ) {
-                    Column(
-                        modifier = Modifier.padding(16.dp),
-                        verticalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        Text(
-                            text = stringResource(R.string.settings_update_title),
-                            style = MaterialTheme.typography.titleMedium
-                        )
-                        Text(
-                            text = updateSummary,
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.testTag(UiTestTags.SETTINGS_ABOUT_UPDATE_SUMMARY)
-                        )
-                        FilledTonalButton(
-                            onClick = onUpdateClick,
-                            enabled = updateActionEnabled,
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .testTag(UiTestTags.SETTINGS_ABOUT_UPDATE_BUTTON)
-                        ) {
-                            Text(text = stringResource(updateActionLabelResId))
-                        }
-                    }
-                }
-            }
-        }
-    }
-}
-
-@Composable
-@OptIn(ExperimentalMaterial3Api::class)
-private fun LanguageSettingsScreen(
-    selectedLanguage: AppLanguage,
-    effectiveLanguageForSummary: AppLanguage,
-    onBackClick: () -> Unit,
-    onLanguageSelected: (AppLanguage) -> Unit
-) {
-    val summary = languageSummaryText(
-        selectedLanguage = selectedLanguage,
-        effectiveLanguageForSummary = effectiveLanguageForSummary
-    )
-
-    Scaffold(
-        modifier = Modifier.fillMaxSize(),
-        topBar = {
-            TopAppBar(
-                title = {
-                    Text(
-                        text = stringResource(R.string.settings_language_title),
-                        style = MaterialTheme.typography.titleLarge
-                    )
-                },
-                navigationIcon = {
-                    IconButton(
-                        onClick = onBackClick,
-                        modifier = Modifier.testTag(UiTestTags.SETTINGS_BACK_BUTTON)
-                    ) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = stringResource(R.string.cd_navigate_back)
-                        )
-                    }
-                }
-            )
-        }
-    ) { innerPadding ->
-        LazyColumn(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(innerPadding)
-                .padding(horizontal = 16.dp),
-            contentPadding = PaddingValues(top = 16.dp, bottom = 24.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            item {
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.surfaceContainerHigh
-                    )
-                ) {
-                    Column(
-                        modifier = Modifier.padding(16.dp),
-                        verticalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        Text(
-                            text = stringResource(R.string.settings_language_dialog_title),
-                            style = MaterialTheme.typography.titleMedium
-                        )
-                        Text(
-                            text = summary,
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                }
-            }
-            item {
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.surfaceContainerHigh
-                    )
-                ) {
-                    Column(
-                        modifier = Modifier.padding(16.dp),
-                        verticalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        LanguageOptionRow(
-                            text = stringResource(R.string.settings_language_option_system),
-                            selected = selectedLanguage == AppLanguage.SYSTEM,
-                            testTag = UiTestTags.SETTINGS_LANGUAGE_OPTION_SYSTEM,
-                            onClick = { onLanguageSelected(AppLanguage.SYSTEM) }
-                        )
-                        LanguageOptionRow(
-                            text = stringResource(R.string.settings_language_option_english),
-                            selected = selectedLanguage == AppLanguage.ENGLISH,
-                            testTag = UiTestTags.SETTINGS_LANGUAGE_OPTION_ENGLISH,
-                            onClick = { onLanguageSelected(AppLanguage.ENGLISH) }
-                        )
-                        LanguageOptionRow(
-                            text = stringResource(R.string.settings_language_option_chinese),
-                            selected = selectedLanguage == AppLanguage.CHINESE_SIMPLIFIED,
-                            testTag = UiTestTags.SETTINGS_LANGUAGE_OPTION_CHINESE,
-                            onClick = { onLanguageSelected(AppLanguage.CHINESE_SIMPLIFIED) }
-                        )
-                    }
-                }
-            }
-        }
-    }
-}
-
-@Composable
-@OptIn(ExperimentalMaterial3Api::class)
-private fun PermissionSettingsScreen(
-    permissionItems: List<PermissionHealthItem>,
-    onBackClick: () -> Unit,
-    onOpenPermissionSettings: (PermissionAction) -> Unit
-) {
-    Scaffold(
-        modifier = Modifier
-            .fillMaxSize()
-            .testTag(UiTestTags.SETTINGS_PERMISSION_PAGE),
-        topBar = {
-            TopAppBar(
-                title = {
-                    Text(
-                        text = stringResource(R.string.permission_health_title),
-                        style = MaterialTheme.typography.titleLarge
-                    )
-                },
-                navigationIcon = {
-                    IconButton(
-                        onClick = onBackClick,
-                        modifier = Modifier.testTag(UiTestTags.SETTINGS_BACK_BUTTON)
-                    ) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = stringResource(R.string.cd_navigate_back)
-                        )
-                    }
-                }
-            )
-        }
-    ) { innerPadding ->
-        LazyColumn(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(innerPadding)
-                .padding(horizontal = 16.dp),
-            contentPadding = PaddingValues(top = 16.dp, bottom = 24.dp)
-        ) {
-            item {
-                PermissionHealthPanel(
-                    items = permissionItems,
-                    onOpenPermissionSettings = onOpenPermissionSettings
-                )
-            }
-        }
-    }
-}
-
-@Composable
-private fun permissionOverviewSummary(items: List<PermissionHealthItem>): String {
-    val needsActionCount = items.count { it.state == PermissionState.NEEDS_ACTION }
-    if (needsActionCount > 0) {
-        return stringResource(
-            R.string.settings_permission_summary_needs_action,
-            needsActionCount
-        )
-    }
-
-    val manualCheckCount = items.count { it.state == PermissionState.MANUAL_CHECK }
-    if (manualCheckCount > 0) {
-        return stringResource(
-            R.string.settings_permission_summary_manual_check,
-            manualCheckCount
-        )
-    }
-
-    return stringResource(R.string.settings_permission_summary_all_ok)
-}
-
-@Composable
-private fun updateOverviewSummary(updateUiState: UpdateUiState): String {
-    return when (updateUiState.status) {
-        UpdateStatus.IDLE -> stringResource(R.string.settings_update_summary_idle)
-        UpdateStatus.CHECKING -> stringResource(R.string.settings_update_summary_checking)
-        UpdateStatus.UPDATE_AVAILABLE -> {
-            val currentVersionName = updateUiState.currentVersionName.ifBlank {
-                stringResource(R.string.settings_about_version_unknown)
-            }
-            val latestVersionName = updateUiState.latestVersionName
-                ?.takeIf { it.isNotBlank() }
-                ?: stringResource(R.string.settings_about_version_unknown)
-            stringResource(
-                R.string.settings_update_summary_available,
-                currentVersionName,
-                latestVersionName
-            )
-        }
-
-        UpdateStatus.UP_TO_DATE -> stringResource(R.string.settings_update_summary_up_to_date)
-        UpdateStatus.FAILED -> stringResource(R.string.settings_update_summary_failed)
-    }
-}
-
-@Composable
-private fun LanguageOptionRow(
-    text: String,
-    selected: Boolean,
-    testTag: String,
-    onClick: () -> Unit
-) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .selectable(
-                selected = selected,
-                role = Role.RadioButton,
-                onClick = onClick
-            )
-            .testTag(testTag)
-            .padding(vertical = 4.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        RadioButton(
-            selected = selected,
-            onClick = null
-        )
-        Text(
-            text = text,
-            modifier = Modifier.padding(start = 8.dp)
-        )
-    }
-}
-
-@Composable
-private fun languageSummaryText(
-    selectedLanguage: AppLanguage,
-    effectiveLanguageForSummary: AppLanguage
-): String {
-    return when (selectedLanguage) {
-        AppLanguage.SYSTEM -> {
-            val effectiveLanguageLabel = stringResource(
-                if (effectiveLanguageForSummary == AppLanguage.CHINESE_SIMPLIFIED) {
-                    R.string.settings_language_effective_chinese
-                } else {
-                    R.string.settings_language_effective_english
-                }
-            )
-            stringResource(
-                R.string.settings_language_summary_follow_system,
-                effectiveLanguageLabel
-            )
-        }
-
-        AppLanguage.ENGLISH -> stringResource(R.string.settings_language_summary_english)
-        AppLanguage.CHINESE_SIMPLIFIED -> stringResource(R.string.settings_language_summary_chinese)
-    }
-}
-
-@Composable
-private fun PermissionHealthPanel(
-    items: List<PermissionHealthItem>,
-    onOpenPermissionSettings: (PermissionAction) -> Unit
-) {
-    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        Text(
-            text = stringResource(R.string.permission_health_title),
-            style = MaterialTheme.typography.titleMedium
-        )
-        Text(
-            text = stringResource(R.string.permission_health_description),
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
-
-        items.forEach { item ->
-            PermissionHealthCard(
-                item = item,
-                onOpenPermissionSettings = onOpenPermissionSettings
-            )
-        }
-    }
-}
-
-@Composable
-private fun PermissionHealthCard(
-    item: PermissionHealthItem,
-    onOpenPermissionSettings: (PermissionAction) -> Unit
-) {
-    ElevatedCard(
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.elevatedCardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceContainerLow
-        )
-    ) {
-        Column(
-            modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(10.dp)
-        ) {
-            Text(
-                text = item.title,
-                style = MaterialTheme.typography.titleMedium
-            )
-            Surface(
-                shape = MaterialTheme.shapes.small,
-                color = permissionStateContainerColor(item.state)
-            ) {
-                Text(
-                    text = item.statusText,
-                    color = permissionStateColor(item.state),
-                    style = MaterialTheme.typography.labelLarge,
-                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp)
-                )
-            }
-            Text(
-                text = item.detailText,
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-            FilledTonalButton(
-                onClick = { onOpenPermissionSettings(item.action) },
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Text(text = item.actionLabel)
-            }
-        }
-    }
-}
-
-@Composable
-private fun permissionStateContainerColor(state: PermissionState): Color {
-    return when (state) {
-        PermissionState.OK -> MaterialTheme.colorScheme.secondaryContainer
-        PermissionState.NEEDS_ACTION -> MaterialTheme.colorScheme.errorContainer
-        PermissionState.MANUAL_CHECK -> MaterialTheme.colorScheme.tertiaryContainer
-        PermissionState.UNAVAILABLE -> MaterialTheme.colorScheme.surfaceContainerHighest
-    }
-}
-
-@Composable
-private fun permissionStateColor(state: PermissionState): Color {
-    return when (state) {
-        PermissionState.OK -> MaterialTheme.colorScheme.onSecondaryContainer
-        PermissionState.NEEDS_ACTION -> MaterialTheme.colorScheme.onErrorContainer
-        PermissionState.MANUAL_CHECK -> MaterialTheme.colorScheme.onTertiaryContainer
-        PermissionState.UNAVAILABLE -> MaterialTheme.colorScheme.onSurfaceVariant
-    }
-}
-
-@Preview(showBackground = true)
-@Composable
-private fun ReminderHomeScreenPreview() {
-    PillRingTheme {
-        ReminderHomeScreen(
-            plans = listOf(
-                ReminderPlan(
-                    id = "1",
-                    name = "Morning pills",
-                    hour = 8,
-                    minute = 30,
-                    enabled = true,
-                    notificationId = 1001,
-                    isReminderActive = false,
-                    suppressNextDeleteFallback = false
-                ),
-                ReminderPlan(
-                    id = "2",
-                    name = "After lunch",
-                    hour = 13,
-                    minute = 0,
-                    enabled = false,
-                    notificationId = 1002,
-                    isReminderActive = true,
-                    suppressNextDeleteFallback = false
-                )
-            ),
-            maxPlans = ReminderSessionStore.MAX_PLAN_COUNT,
-            onAddPlanClick = {},
-            onEditPlanClick = {},
-            onDeletePlanClick = {},
-            onMoveUpClick = {},
-            onMoveDownClick = {},
-            onPlanEnabledChange = { _, _ -> },
-            onOpenSettingsClick = {},
-            onOpenReminderConfirmFromPlanCard = {}
-        )
-    }
-}
-
-@Preview(showBackground = true)
-@Composable
-private fun SettingsOverviewScreenPreview() {
-    PillRingTheme {
-        SettingsOverviewScreen(
-            permissionItems = listOf(
-                PermissionHealthItem(
-                    id = "notification",
-                    title = "Notification permission",
-                    statusText = "Needs action",
-                    detailText = "Allow notifications to receive reminder popups.",
-                    state = PermissionState.NEEDS_ACTION,
-                    actionLabel = "Open settings",
-                    action = PermissionAction.OPEN_NOTIFICATION_SETTINGS
-                )
-            ),
-            selectedLanguage = AppLanguage.SYSTEM,
-            effectiveLanguageForSummary = AppLanguage.ENGLISH,
-            appVersionName = "1.0",
-            onBackClick = {},
-            onLanguageClick = {},
-            onPermissionClick = {},
-            onAboutClick = {}
-        )
-    }
-}
-
-@Preview(showBackground = true)
-@Composable
-private fun AboutSettingsScreenPreview() {
-    PillRingTheme {
-        AboutSettingsScreen(
-            appVersionName = "1.0",
-            updateUiState = UpdateUiState(
-                status = UpdateStatus.UPDATE_AVAILABLE,
-                currentVersionName = "0.1.0",
-                latestVersionName = "0.2.0",
-                releaseUrl = AppUpdateRepository.DEFAULT_RELEASE_PAGE_URL,
-                lastCheckedAtEpochMs = System.currentTimeMillis()
-            ),
-            onUpdateClick = {},
-            onBackClick = {}
-        )
-    }
-}
-
-@Preview(showBackground = true)
-@Composable
-private fun LanguageSettingsScreenPreview() {
-    PillRingTheme {
-        LanguageSettingsScreen(
-            selectedLanguage = AppLanguage.SYSTEM,
-            effectiveLanguageForSummary = AppLanguage.ENGLISH,
-            onBackClick = {},
-            onLanguageSelected = {}
-        )
-    }
-}
-
-@Preview(showBackground = true)
-@Composable
-private fun PermissionSettingsScreenPreview() {
-    PillRingTheme {
-        PermissionSettingsScreen(
-            permissionItems = listOf(
-                PermissionHealthItem(
-                    id = "notification",
-                    title = "Notification permission",
-                    statusText = "Needs action",
-                    detailText = "Allow notifications to receive reminder popups.",
-                    state = PermissionState.NEEDS_ACTION,
-                    actionLabel = "Open settings",
-                    action = PermissionAction.OPEN_NOTIFICATION_SETTINGS
-                )
-            ),
-            onBackClick = {},
-            onOpenPermissionSettings = {}
-        )
-    }
 }

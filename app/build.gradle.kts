@@ -55,6 +55,9 @@ android {
         compose = true
         buildConfig = true
     }
+    lint {
+        lintConfig = file("lint.xml")
+    }
 }
 
 dependencies {
@@ -69,6 +72,7 @@ dependencies {
     implementation(libs.androidx.compose.material3)
     implementation(libs.androidx.compose.material.icons.extended)
     testImplementation(libs.junit)
+    testImplementation(libs.org.json)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
     androidTestImplementation(libs.androidx.test.rules)

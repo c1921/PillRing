@@ -80,4 +80,26 @@ class AppUpdateRepositoryTest {
 
         assertNull(result)
     }
+
+    @Test
+    fun parseLatestReleasePayload_returnsNullWhenTagNameMissing() {
+        val payload = """
+            {
+              "html_url": "https://github.com/c1921/PillRing/releases/tag/v0.2.0",
+              "draft": false,
+              "prerelease": false
+            }
+        """.trimIndent()
+
+        val result = parseLatestReleasePayload(payload)
+
+        assertNull(result)
+    }
+
+    @Test
+    fun parseLatestReleasePayload_returnsNullWhenPayloadMalformed() {
+        val result = parseLatestReleasePayload("{not-json")
+
+        assertNull(result)
+    }
 }

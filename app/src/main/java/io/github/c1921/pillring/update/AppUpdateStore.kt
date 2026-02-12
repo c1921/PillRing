@@ -1,11 +1,12 @@
 package io.github.c1921.pillring.update
 
 import android.content.Context
+import androidx.core.content.edit
 
-class AppUpdateStore(context: Context) {
+class AppUpdateStore(context: Context) : UpdateStore {
     private val preferences = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
 
-    fun readCachedResult(currentVersionName: String): UpdateCheckResult? {
+    override fun readCachedResult(currentVersionName: String): UpdateCheckResult? {
         if (!preferences.contains(KEY_LAST_CHECK_EPOCH_MS)) {
             return null
         }
@@ -27,16 +28,16 @@ class AppUpdateStore(context: Context) {
         )
     }
 
-    fun saveResult(result: UpdateCheckResult) {
-        preferences.edit()
-            .putLong(KEY_LAST_CHECK_EPOCH_MS, result.checkedAtEpochMs)
-            .putString(KEY_LAST_CHECK_STATUS, result.status.name)
-            .putString(KEY_LATEST_VERSION_NAME, result.latestVersionName)
-            .putString(KEY_LATEST_RELEASE_URL, result.releaseUrl)
-            .apply()
+    override fun saveResult(result: UpdateCheckResult) {
+        preferences.edit {
+            putLong(KEY_LAST_CHECK_EPOCH_MS, result.checkedAtEpochMs)
+            putString(KEY_LAST_CHECK_STATUS, result.status.name)
+            putString(KEY_LATEST_VERSION_NAME, result.latestVersionName)
+            putString(KEY_LATEST_RELEASE_URL, result.releaseUrl)
+        }
     }
 
-    fun lastCheckEpochMs(): Long? {
+    override fun lastCheckEpochMs(): Long? {
         if (!preferences.contains(KEY_LAST_CHECK_EPOCH_MS)) {
             return null
         }

@@ -1,0 +1,13 @@
+<resources>
+    <plurals name="label_repeat_summary_interval">
+        <item quantity="other">重复：间隔 %1$d 日，自 %2$s 起</item>
+    </plurals>
+
+    <plurals name="settings_permission_summary_needs_action">
+        <item quantity="other">%1$d 项需处理</item>
+    </plurals>
+
+    <plurals name="settings_permission_summary_manual_check">
+        <item quantity="other">%1$d 项需手动检查</item>
+    </plurals>
+</resources>

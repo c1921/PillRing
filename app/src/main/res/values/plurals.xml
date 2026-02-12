@@ -1,0 +1,16 @@
+<resources>
+    <plurals name="label_repeat_summary_interval">
+        <item quantity="one">Repeat: Interval %1$d day, from %2$s</item>
+        <item quantity="other">Repeat: Interval %1$d days, from %2$s</item>
+    </plurals>
+
+    <plurals name="settings_permission_summary_needs_action">
+        <item quantity="one">%1$d item needs action</item>
+        <item quantity="other">%1$d items need action</item>
+    </plurals>
+
+    <plurals name="settings_permission_summary_manual_check">
+        <item quantity="one">%1$d item needs manual check</item>
+        <item quantity="other">%1$d items need manual check</item>
+    </plurals>
+</resources>

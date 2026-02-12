@@ -1,8 +1,6 @@
 package io.github.c1921.pillring.notification
 
 import android.content.Context
-import org.json.JSONArray
-import org.json.JSONObject
 import java.util.UUID
 
 object ReminderSessionStore {
@@ -15,21 +13,9 @@ object ReminderSessionStore {
 
     private const val DEFAULT_NOTIFICATION_ID_START = 1001
 
-    private const val PLAN_ID = "id"
-    private const val PLAN_NAME = "name"
-    private const val PLAN_HOUR = "hour"
-    private const val PLAN_MINUTE = "minute"
-    private const val PLAN_REPEAT_MODE = "repeat_mode"
-    private const val PLAN_INTERVAL_DAYS = "interval_days"
-    private const val PLAN_START_DATE_EPOCH_DAY = "start_date_epoch_day"
-    private const val PLAN_ENABLED = "enabled"
-    private const val PLAN_NOTIFICATION_ID = "notification_id"
-    private const val PLAN_IS_REMINDER_ACTIVE = "is_reminder_active"
-    private const val PLAN_SUPPRESS_NEXT_DELETE_FALLBACK = "suppress_next_delete_fallback"
-
     fun getPlans(context: Context): List<ReminderPlan> {
         ensureInitialized(context)
-        return readPlans(prefs(context))
+        return readPlans(dataSource(context))
     }
 
     fun getPlan(
@@ -50,7 +36,7 @@ object ReminderSessionStore {
         startDateEpochDay: Long? = null
     ): ReminderPlan {
         validateTime(hour = hour, minute = minute)
-        val normalizedRepeatConfig = normalizeRepeatConfig(
+        val normalizedRepeatConfig = ReminderPlanJsonCodec.normalizeRepeatConfig(
             repeatMode = repeatMode,
             intervalDays = intervalDays,
             startDateEpochDay = startDateEpochDay,
@@ -61,8 +47,8 @@ object ReminderSessionStore {
 
         ensureInitialized(context)
         synchronized(this) {
-            val preferences = prefs(context)
-            val plans = readPlans(preferences).toMutableList()
+            val dataSource = dataSource(context)
+            val plans = readPlans(dataSource).toMutableList()
             if (plans.size >= MAX_PLAN_COUNT) {
                 throw IllegalStateException("maximum plan count reached")
             }
@@ -76,12 +62,12 @@ object ReminderSessionStore {
                 intervalDays = normalizedRepeatConfig.intervalDays,
                 startDateEpochDay = normalizedRepeatConfig.startDateEpochDay,
                 enabled = enabled,
-                notificationId = allocateNotificationId(preferences),
+                notificationId = allocateNotificationId(dataSource),
                 isReminderActive = false,
                 suppressNextDeleteFallback = false
             )
             plans += plan
-            savePlans(preferences = preferences, plans = plans)
+            savePlans(dataSource = dataSource, plans = plans)
             return plan
         }
     }
@@ -91,7 +77,7 @@ object ReminderSessionStore {
         plan: ReminderPlan
     ) {
         validateTime(hour = plan.hour, minute = plan.minute)
-        val normalizedRepeatConfig = normalizeRepeatConfig(
+        val normalizedRepeatConfig = ReminderPlanJsonCodec.normalizeRepeatConfig(
             repeatMode = plan.repeatMode,
             intervalDays = plan.intervalDays,
             startDateEpochDay = plan.startDateEpochDay,
@@ -102,8 +88,8 @@ object ReminderSessionStore {
 
         ensureInitialized(context)
         synchronized(this) {
-            val preferences = prefs(context)
-            val plans = readPlans(preferences).toMutableList()
+            val dataSource = dataSource(context)
+            val plans = readPlans(dataSource).toMutableList()
             val targetIndex = plans.indexOfFirst { it.id == plan.id }
             if (targetIndex < 0) {
                 return
@@ -114,7 +100,7 @@ object ReminderSessionStore {
                 intervalDays = normalizedRepeatConfig.intervalDays,
                 startDateEpochDay = normalizedRepeatConfig.startDateEpochDay
             )
-            savePlans(preferences = preferences, plans = plans)
+            savePlans(dataSource = dataSource, plans = plans)
         }
     }
 
@@ -124,11 +110,11 @@ object ReminderSessionStore {
     ) {
         ensureInitialized(context)
         synchronized(this) {
-            val preferences = prefs(context)
-            val plans = readPlans(preferences).toMutableList()
+            val dataSource = dataSource(context)
+            val plans = readPlans(dataSource).toMutableList()
             val removed = plans.removeAll { it.id == planId }
             if (removed) {
-                savePlans(preferences = preferences, plans = plans)
+                savePlans(dataSource = dataSource, plans = plans)
             }
         }
     }
@@ -139,8 +125,8 @@ object ReminderSessionStore {
     ) {
         ensureInitialized(context)
         synchronized(this) {
-            val preferences = prefs(context)
-            val plans = readPlans(preferences).toMutableList()
+            val dataSource = dataSource(context)
+            val plans = readPlans(dataSource).toMutableList()
             val index = plans.indexOfFirst { it.id == planId }
             if (index <= 0) {
                 return
@@ -148,7 +134,7 @@ object ReminderSessionStore {
             val current = plans[index]
             plans[index] = plans[index - 1]
             plans[index - 1] = current
-            savePlans(preferences = preferences, plans = plans)
+            savePlans(dataSource = dataSource, plans = plans)
         }
     }
 
@@ -158,8 +144,8 @@ object ReminderSessionStore {
     ) {
         ensureInitialized(context)
         synchronized(this) {
-            val preferences = prefs(context)
-            val plans = readPlans(preferences).toMutableList()
+            val dataSource = dataSource(context)
+            val plans = readPlans(dataSource).toMutableList()
             val index = plans.indexOfFirst { it.id == planId }
             if (index < 0 || index >= plans.lastIndex) {
                 return
@@ -167,7 +153,7 @@ object ReminderSessionStore {
             val current = plans[index]
             plans[index] = plans[index + 1]
             plans[index + 1] = current
-            savePlans(preferences = preferences, plans = plans)
+            savePlans(dataSource = dataSource, plans = plans)
         }
     }
 
@@ -201,8 +187,8 @@ object ReminderSessionStore {
     ): Boolean {
         ensureInitialized(context)
         synchronized(this) {
-            val preferences = prefs(context)
-            val plans = readPlans(preferences).toMutableList()
+            val dataSource = dataSource(context)
+            val plans = readPlans(dataSource).toMutableList()
             val index = plans.indexOfFirst { it.id == planId }
             if (index < 0) {
                 return false
@@ -212,7 +198,7 @@ object ReminderSessionStore {
                 return false
             }
             plans[index] = plans[index].copy(suppressNextDeleteFallback = false)
-            savePlans(preferences = preferences, plans = plans)
+            savePlans(dataSource = dataSource, plans = plans)
             return true
         }
     }
@@ -228,156 +214,68 @@ object ReminderSessionStore {
     ) {
         ensureInitialized(context)
         synchronized(this) {
-            val preferences = prefs(context)
-            val plans = readPlans(preferences).toMutableList()
+            val dataSource = dataSource(context)
+            val plans = readPlans(dataSource).toMutableList()
             val index = plans.indexOfFirst { it.id == planId }
             if (index < 0) {
                 return
             }
             plans[index] = transform(plans[index])
-            savePlans(preferences = preferences, plans = plans)
+            savePlans(dataSource = dataSource, plans = plans)
         }
     }
 
     private fun ensureInitialized(context: Context) {
-        val preferences = prefs(context)
-        val initialized = preferences.contains(KEY_PLANS_JSON) &&
-            preferences.contains(KEY_NEXT_NOTIFICATION_ID)
+        val dataSource = dataSource(context)
+        val initialized = dataSource.contains(KEY_PLANS_JSON) &&
+            dataSource.contains(KEY_NEXT_NOTIFICATION_ID)
         if (initialized) {
             return
         }
 
         synchronized(this) {
-            val latestPrefs = prefs(context)
-            val latestInitialized = latestPrefs.contains(KEY_PLANS_JSON) &&
-                latestPrefs.contains(KEY_NEXT_NOTIFICATION_ID)
+            val latestDataSource = dataSource(context)
+            val latestInitialized = latestDataSource.contains(KEY_PLANS_JSON) &&
+                latestDataSource.contains(KEY_NEXT_NOTIFICATION_ID)
             if (latestInitialized) {
                 return
             }
 
-            val existingPlans = readPlans(latestPrefs)
-            val editor = latestPrefs.edit()
+            val existingPlans = readPlans(latestDataSource)
+            val hasPlansJson = latestDataSource.contains(KEY_PLANS_JSON)
+            val hasNextNotificationId = latestDataSource.contains(KEY_NEXT_NOTIFICATION_ID)
 
-            if (!latestPrefs.contains(KEY_PLANS_JSON)) {
-                editor.putString(KEY_PLANS_JSON, encodePlans(existingPlans))
+            latestDataSource.edit(commitSynchronously = true) {
+                if (!hasPlansJson) {
+                    putString(KEY_PLANS_JSON, ReminderPlanJsonCodec.encodePlans(existingPlans))
+                }
+                if (!hasNextNotificationId) {
+                    val nextNotificationId = (existingPlans.maxOfOrNull { it.notificationId }
+                        ?: (DEFAULT_NOTIFICATION_ID_START - 1)) + 1
+                    putInt(KEY_NEXT_NOTIFICATION_ID, nextNotificationId)
+                }
             }
-            if (!latestPrefs.contains(KEY_NEXT_NOTIFICATION_ID)) {
-                val nextNotificationId = (existingPlans.maxOfOrNull { it.notificationId }
-                    ?: (DEFAULT_NOTIFICATION_ID_START - 1)) + 1
-                editor.putInt(KEY_NEXT_NOTIFICATION_ID, nextNotificationId)
-            }
-
-            editor.apply()
         }
     }
 
-    private fun readPlans(preferences: android.content.SharedPreferences): List<ReminderPlan> {
-        val plansJson = preferences.getString(KEY_PLANS_JSON, null)
-        return parsePlans(plansJson)
+    private fun readPlans(dataSource: ReminderPreferencesDataSource): List<ReminderPlan> {
+        return ReminderPlanJsonCodec.parsePlans(dataSource.getString(KEY_PLANS_JSON))
     }
 
     private fun savePlans(
-        preferences: android.content.SharedPreferences,
+        dataSource: ReminderPreferencesDataSource,
         plans: List<ReminderPlan>
     ) {
-        preferences.edit()
-            .putString(KEY_PLANS_JSON, encodePlans(plans))
-            .apply()
-    }
-
-    private fun parsePlans(plansJson: String?): List<ReminderPlan> {
-        if (plansJson.isNullOrBlank()) {
-            return emptyList()
-        }
-        return try {
-            val array = JSONArray(plansJson)
-            buildList {
-                for (index in 0 until array.length()) {
-                    val item = array.optJSONObject(index) ?: continue
-                    val id = item.optString(PLAN_ID).trim()
-                    if (id.isEmpty()) {
-                        continue
-                    }
-                    val hour = item.optInt(PLAN_HOUR, -1)
-                    val minute = item.optInt(PLAN_MINUTE, -1)
-                    if (hour !in 0..23 || minute !in 0..59) {
-                        continue
-                    }
-                    val notificationId = item.optInt(PLAN_NOTIFICATION_ID, -1)
-                    if (notificationId <= 0) {
-                        continue
-                    }
-                    val repeatMode = item.optString(
-                        PLAN_REPEAT_MODE,
-                        ReminderRepeatMode.DAILY.name
-                    ).toRepeatModeOrNull() ?: ReminderRepeatMode.DAILY
-                    val intervalDays = item.optInt(PLAN_INTERVAL_DAYS, 1)
-                    val startDateEpochDay = if (
-                        item.has(PLAN_START_DATE_EPOCH_DAY) &&
-                        !item.isNull(PLAN_START_DATE_EPOCH_DAY)
-                    ) {
-                        item.optLong(PLAN_START_DATE_EPOCH_DAY)
-                    } else {
-                        null
-                    }
-                    val normalizedRepeatConfig = normalizeRepeatConfig(
-                        repeatMode = repeatMode,
-                        intervalDays = intervalDays,
-                        startDateEpochDay = startDateEpochDay,
-                        strict = false
-                    )
-                    val name = item.optString(PLAN_NAME).trim()
-                    add(
-                        ReminderPlan(
-                            id = id,
-                            name = name.ifEmpty { "Plan" },
-                            hour = hour,
-                            minute = minute,
-                            repeatMode = normalizedRepeatConfig.repeatMode,
-                            intervalDays = normalizedRepeatConfig.intervalDays,
-                            startDateEpochDay = normalizedRepeatConfig.startDateEpochDay,
-                            enabled = item.optBoolean(PLAN_ENABLED, false),
-                            notificationId = notificationId,
-                            isReminderActive = item.optBoolean(PLAN_IS_REMINDER_ACTIVE, false),
-                            suppressNextDeleteFallback = item.optBoolean(
-                                PLAN_SUPPRESS_NEXT_DELETE_FALLBACK,
-                                false
-                            )
-                        )
-                    )
-                }
-            }
-        } catch (_: Exception) {
-            emptyList()
+        dataSource.edit(commitSynchronously = true) {
+            putString(KEY_PLANS_JSON, ReminderPlanJsonCodec.encodePlans(plans))
         }
     }
 
-    private fun encodePlans(plans: List<ReminderPlan>): String {
-        val array = JSONArray()
-        plans.forEach { plan ->
-            array.put(
-                JSONObject()
-                    .put(PLAN_ID, plan.id)
-                    .put(PLAN_NAME, plan.name)
-                    .put(PLAN_HOUR, plan.hour)
-                    .put(PLAN_MINUTE, plan.minute)
-                    .put(PLAN_REPEAT_MODE, plan.repeatMode.name)
-                    .put(PLAN_INTERVAL_DAYS, plan.intervalDays)
-                    .put(PLAN_START_DATE_EPOCH_DAY, plan.startDateEpochDay)
-                    .put(PLAN_ENABLED, plan.enabled)
-                    .put(PLAN_NOTIFICATION_ID, plan.notificationId)
-                    .put(PLAN_IS_REMINDER_ACTIVE, plan.isReminderActive)
-                    .put(PLAN_SUPPRESS_NEXT_DELETE_FALLBACK, plan.suppressNextDeleteFallback)
-            )
+    private fun allocateNotificationId(dataSource: ReminderPreferencesDataSource): Int {
+        val nextId = dataSource.getInt(KEY_NEXT_NOTIFICATION_ID, DEFAULT_NOTIFICATION_ID_START)
+        dataSource.edit(commitSynchronously = true) {
+            putInt(KEY_NEXT_NOTIFICATION_ID, nextId + 1)
         }
-        return array.toString()
-    }
-
-    private fun allocateNotificationId(preferences: android.content.SharedPreferences): Int {
-        val nextId = preferences.getInt(KEY_NEXT_NOTIFICATION_ID, DEFAULT_NOTIFICATION_ID_START)
-        preferences.edit()
-            .putInt(KEY_NEXT_NOTIFICATION_ID, nextId + 1)
-            .apply()
         return nextId
     }
 
@@ -389,53 +287,8 @@ object ReminderSessionStore {
         require(minute in 0..59) { "minute must be in 0..59" }
     }
 
-    private fun normalizeRepeatConfig(
-        repeatMode: ReminderRepeatMode,
-        intervalDays: Int,
-        startDateEpochDay: Long?,
-        strict: Boolean
-    ): RepeatConfig {
-        if (repeatMode == ReminderRepeatMode.DAILY) {
-            return RepeatConfig(
-                repeatMode = ReminderRepeatMode.DAILY,
-                intervalDays = 1,
-                startDateEpochDay = null
-            )
-        }
-
-        val isIntervalValid = intervalDays in 1..365
-        val isStartDateValid = startDateEpochDay != null
-
-        if (isIntervalValid && isStartDateValid) {
-            return RepeatConfig(
-                repeatMode = ReminderRepeatMode.INTERVAL_DAYS,
-                intervalDays = intervalDays,
-                startDateEpochDay = startDateEpochDay
-            )
-        }
-
-        if (strict) {
-            require(isIntervalValid) { "intervalDays must be in 1..365" }
-            require(isStartDateValid) { "startDateEpochDay must not be null for interval mode" }
-        }
-
-        return RepeatConfig(
-            repeatMode = ReminderRepeatMode.DAILY,
-            intervalDays = 1,
-            startDateEpochDay = null
-        )
+    private fun dataSource(context: Context): ReminderPreferencesDataSource {
+        val preferences = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        return ReminderPreferencesDataSource(preferences)
     }
-
-    private fun String.toRepeatModeOrNull(): ReminderRepeatMode? {
-        return ReminderRepeatMode.entries.firstOrNull { it.name == this }
-    }
-
-    private data class RepeatConfig(
-        val repeatMode: ReminderRepeatMode,
-        val intervalDays: Int,
-        val startDateEpochDay: Long?
-    )
-
-    private fun prefs(context: Context) =
-        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
 }

@@ -6,6 +6,7 @@ import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import org.junit.After
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -65,6 +66,22 @@ class LegacyCompatibilityRemovalTest {
 
         val latest = ReminderSessionStore.getPlan(context, plan.id)
         assertFalse(latest?.isReminderActive ?: true)
+    }
+
+    @Test
+    fun addPlan_thenImmediateRead_planExists() {
+        val plan = ReminderSessionStore.addPlan(
+            context = context,
+            name = "Immediate Read",
+            hour = 10,
+            minute = 30,
+            enabled = true
+        )
+
+        val latest = ReminderSessionStore.getPlan(context, plan.id)
+
+        assertNotNull(latest)
+        assertTrue(latest?.id == plan.id)
     }
 
     private fun clearStore() {

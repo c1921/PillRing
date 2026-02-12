@@ -7,25 +7,18 @@
     <string name="label_name_length">%1$d/%2$d</string>
     <string name="label_repeat_mode">Repeat mode</string>
     <string name="label_interval_days">Interval days</string>
-    <string name="label_interval_days_supporting">Set from 1 to 365. Interval of 1 triggers on days 1, 3, 5...</string>
+    <string name="label_interval_days_supporting">Set from 1 to 365. Interval of 1 triggers on days 1, 3, 5…</string>
     <string name="label_start_date_not_selected">Not selected</string>
     <string name="label_selected_start_date">Start date: %1$s</string>
     <string name="label_repeat_summary_daily">Repeat: Daily</string>
-    <string name="label_repeat_summary_interval">Repeat: Interval %1$d day(s), from %2$s</string>
 
     <string name="btn_select_time">Select time</string>
-    <string name="btn_select_start_date">Select start date</string>
     <string name="btn_add_plan">Add plan</string>
     <string name="btn_edit_plan">Edit</string>
     <string name="btn_delete_plan">Delete</string>
     <string name="btn_move_up">Move up</string>
     <string name="btn_move_down">Move down</string>
-    <string name="btn_enable_plan">Enable daily plan</string>
-    <string name="btn_disable_plan">Disable daily plan</string>
-    <string name="btn_confirm_stop_reminder">Confirm and stop this round</string>
     <string name="btn_confirm_stop_plan_reminder">Confirm and stop this plan reminder</string>
-    <string name="btn_open_settings_page">Settings</string>
-    <string name="btn_back_to_test_page">Back</string>
     <string name="cd_open_settings">Open settings</string>
     <string name="cd_navigate_back">Navigate back</string>
     <string name="cd_more_plan_actions">More plan actions</string>
@@ -41,12 +34,8 @@
     <string name="msg_notification_permission_denied">Notification permission denied.</string>
     <string name="msg_exact_alarm_required">Exact alarm permission is required.</string>
     <string name="msg_exact_alarm_failed">Failed to schedule exact alarm.</string>
-    <string name="msg_plan_enabled">Daily reminder plan enabled.</string>
-    <string name="msg_plan_disabled">Daily reminder plan disabled.</string>
-    <string name="msg_time_saved">Reminder time saved.</string>
     <string name="msg_time_updated_rescheduled">Reminder time updated and next trigger rescheduled.</string>
     <string name="msg_time_updated_reschedule_failed">Time saved, but failed to reschedule next trigger.</string>
-    <string name="msg_reminder_stopped">Reminder stopped for this round.</string>
     <string name="msg_open_settings_failed">Unable to open settings for this item.</string>
     <string name="msg_open_update_page_failed">Unable to open release page.</string>
     <string name="msg_update_up_to_date">You\'re on the latest version.</string>
@@ -64,8 +53,6 @@
 
     <string name="notification_channel_name">Pill reminders</string>
     <string name="notification_channel_description">High priority reminder notifications for medicine schedule.</string>
-    <string name="notification_title_ongoing">Pill reminder</string>
-    <string name="notification_text_ongoing">Time to take your medicine.</string>
     <string name="notification_title_with_plan">%1$s reminder</string>
     <string name="notification_text_with_plan_time">%1$s at %2$s. Time to take your medicine.</string>
 
@@ -78,10 +65,8 @@
     <string name="reminder_confirm_secondary_title">Reminder details</string>
     <string name="reminder_confirm_plan_label">Plan: %1$s</string>
     <string name="reminder_confirm_time_label">Scheduled time: %1$s</string>
-    <string name="reminder_confirm_description">Tap confirm after taking medicine to stop this plan\'s current reminder.</string>
 
     <string name="settings_page_title">Settings</string>
-    <string name="settings_page_description">Review permission health and fix issues that affect reminder reliability.</string>
     <string name="settings_language_title">Language</string>
     <string name="settings_language_dialog_title">App language</string>
     <string name="settings_language_option_system">Follow system</string>
@@ -97,17 +82,15 @@
     <string name="settings_about_version_label">Version</string>
     <string name="settings_about_version_unknown">Unknown version</string>
     <string name="settings_permission_summary_all_ok">All permission checks are healthy</string>
-    <string name="settings_permission_summary_needs_action">%1$d item(s) need action</string>
-    <string name="settings_permission_summary_manual_check">%1$d item(s) need manual check</string>
     <string name="settings_update_title">App update</string>
     <string name="settings_update_summary_idle">Tap to check the latest version.</string>
-    <string name="settings_update_summary_checking">Checking for updates...</string>
+    <string name="settings_update_summary_checking">Checking for updates…</string>
     <string name="settings_update_summary_available">Current %1$s, latest %2$s</string>
     <string name="settings_update_summary_up_to_date">You\'re on the latest version</string>
     <string name="settings_update_summary_failed">Last check failed. Tap to retry.</string>
     <string name="settings_update_action_check_now">Check for updates</string>
     <string name="settings_update_action_open_release">Open release page</string>
-    <string name="settings_update_action_checking">Checking...</string>
+    <string name="settings_update_action_checking">Checking…</string>
 
     <string name="permission_health_title">Permission Health</string>
     <string name="permission_health_description">Check reminder-related permissions and open system settings when needed.</string>
@@ -130,12 +113,11 @@
     <string name="reason_plan_enabled">Reminder plan enabled from home screen.</string>
     <string name="reason_time_updated">Reminder time updated while plan enabled.</string>
     <string name="reason_plan_scheduled">Reminder scheduled by repeat rules.</string>
-    <string name="reason_daily_scheduled">Daily reminder triggered by schedule.</string>
     <string name="reason_delete_fallback">Notification dismissed; fallback reminder in 30 seconds. Previous reason: %1$s</string>
     <string name="reason_unknown">unknown</string>
     <string name="btn_reminder_hold_to_confirm">Press and hold</string>
     <string name="reminder_confirm_long_press_description">After taking medicine, press and hold to stop the current reminder for this plan.</string>
     <string name="reminder_confirm_hold_hint_idle">Press and hold for 1.2 seconds to confirm.</string>
-    <string name="reminder_confirm_hold_hint_holding">Keep holding...</string>
-    <string name="reminder_confirm_hold_hint_completed">Confirmed. Stopping reminder...</string>
+    <string name="reminder_confirm_hold_hint_holding">Keep holding…</string>
+    <string name="reminder_confirm_hold_hint_completed">Confirmed. Stopping reminder…</string>
 </resources>

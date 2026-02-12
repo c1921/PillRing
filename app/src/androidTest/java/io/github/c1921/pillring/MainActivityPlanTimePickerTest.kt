@@ -58,7 +58,7 @@ class MainActivityPlanTimePickerTest {
         composeRule.onNodeWithTag(UiTestTags.PLAN_TIME_PICKER_CANCEL).performClick()
 
         composeRule.onAllNodesWithTag(UiTestTags.PLAN_TIME_PICKER).assertCountEquals(0)
-        composeRule.onNodeWithTag(UiTestTags.PLAN_EDITOR_SELECTED_TIME).assertTextEquals(before)
+        composeRule.onNodeWithTag(UiTestTags.PLAN_EDITOR_SELECTED_TIME, useUnmergedTree = true).assertTextEquals(before)
     }
 
     @Test
@@ -72,7 +72,7 @@ class MainActivityPlanTimePickerTest {
         composeRule.onNodeWithTag(UiTestTags.PLAN_TIME_PICKER_CONFIRM).performClick()
 
         composeRule.onAllNodesWithTag(UiTestTags.PLAN_TIME_PICKER).assertCountEquals(0)
-        composeRule.onNodeWithTag(UiTestTags.PLAN_EDITOR_SELECTED_TIME).assertTextEquals(before)
+        composeRule.onNodeWithTag(UiTestTags.PLAN_EDITOR_SELECTED_TIME, useUnmergedTree = true).assertTextEquals(before)
     }
 
     @Test
@@ -80,7 +80,7 @@ class MainActivityPlanTimePickerTest {
         openAddPlanDialog()
 
         composeRule.onAllNodesWithTag(UiTestTags.PLAN_EDITOR_SELECT_TIME_BUTTON).assertCountEquals(1)
-        composeRule.onAllNodesWithTag(UiTestTags.PLAN_EDITOR_SELECTED_TIME).assertCountEquals(1)
+        composeRule.onAllNodesWithTag(UiTestTags.PLAN_EDITOR_SELECTED_TIME, useUnmergedTree = true).assertCountEquals(1)
     }
 
     @Test
@@ -110,7 +110,7 @@ class MainActivityPlanTimePickerTest {
 
         composeRule.onAllNodesWithTag(UiTestTags.PLAN_EDITOR_SELECT_START_DATE_BUTTON)
             .assertCountEquals(1)
-        composeRule.onAllNodesWithTag(UiTestTags.PLAN_EDITOR_SELECTED_START_DATE)
+        composeRule.onAllNodesWithTag(UiTestTags.PLAN_EDITOR_SELECTED_START_DATE, useUnmergedTree = true)
             .assertCountEquals(1)
     }
 
@@ -118,8 +118,9 @@ class MainActivityPlanTimePickerTest {
     fun intervalMode_savedPlan_showsRepeatSummaryOnCard() {
         val todayEpochDay = LocalDate.now(ZoneId.systemDefault()).toEpochDay()
         seedSingleIntervalPlan(startDateEpochDay = todayEpochDay)
-        val expected = string(
-            R.string.label_repeat_summary_interval,
+        val expected = quantityString(
+            R.plurals.label_repeat_summary_interval,
+            1,
             1,
             formatReminderDate(todayEpochDay)
         )
@@ -175,7 +176,7 @@ class MainActivityPlanTimePickerTest {
 
     private fun selectedTimeLabel(): String {
         val semanticsNode = composeRule
-            .onNodeWithTag(UiTestTags.PLAN_EDITOR_SELECTED_TIME)
+            .onNodeWithTag(UiTestTags.PLAN_EDITOR_SELECTED_TIME, useUnmergedTree = true)
             .fetchSemanticsNode()
         return semanticsNode.config[SemanticsProperties.Text]
             .joinToString(separator = "") { annotatedString -> annotatedString.text }
@@ -190,6 +191,14 @@ class MainActivityPlanTimePickerTest {
         vararg formatArgs: Any
     ): String {
         return composeRule.activity.getString(resId, *formatArgs)
+    }
+
+    private fun quantityString(
+        @androidx.annotation.PluralsRes resId: Int,
+        quantity: Int,
+        vararg formatArgs: Any
+    ): String {
+        return composeRule.activity.resources.getQuantityString(resId, quantity, *formatArgs)
     }
 
     private fun formatReminderDate(epochDay: Long): String {
