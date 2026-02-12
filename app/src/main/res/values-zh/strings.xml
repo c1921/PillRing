@@ -5,8 +5,16 @@
     <string name="label_selected_time">已选时间：%1$s</string>
     <string name="label_plan_name">计划名称</string>
     <string name="label_name_length">%1$d/%2$d</string>
+    <string name="label_repeat_mode">重复模式</string>
+    <string name="label_interval_days">间隔天数</string>
+    <string name="label_interval_days_supporting">范围 1-365。间隔 1 天表示在第 1、3、5... 天提醒。</string>
+    <string name="label_start_date_not_selected">未选择</string>
+    <string name="label_selected_start_date">起始日期：%1$s</string>
+    <string name="label_repeat_summary_daily">重复：每日</string>
+    <string name="label_repeat_summary_interval">重复：间隔 %1$d 日，自 %2$s 起</string>
 
     <string name="btn_select_time">选择时间</string>
+    <string name="btn_select_start_date">选择起始日期</string>
     <string name="btn_add_plan">添加计划</string>
     <string name="btn_edit_plan">编辑</string>
     <string name="btn_delete_plan">删除</string>
@@ -21,6 +29,8 @@
     <string name="cd_open_settings">打开设置</string>
     <string name="cd_navigate_back">返回上一页</string>
     <string name="cd_more_plan_actions">更多计划操作</string>
+    <string name="option_repeat_daily">每日</string>
+    <string name="option_repeat_interval_days">间隔 X 日</string>
 
     <string name="dialog_add_plan_title">添加计划</string>
     <string name="dialog_edit_plan_title">编辑计划</string>
@@ -117,8 +127,9 @@
     <string name="permission_status_unavailable">该设备不支持</string>
     <string name="permission_action_open_settings">打开设置</string>
 
-    <string name="reason_plan_enabled">从首页启用了每日提醒计划。</string>
+    <string name="reason_plan_enabled">从首页启用了提醒计划。</string>
     <string name="reason_time_updated">在计划启用状态下更新了提醒时间。</string>
+    <string name="reason_plan_scheduled">根据重复规则安排的提醒。</string>
     <string name="reason_daily_scheduled">由计划触发的每日提醒。</string>
     <string name="reason_delete_fallback">通知被清除；30 秒后触发兜底提醒。此前原因：%1$s</string>
     <string name="reason_unknown">未知</string>

@@ -46,6 +46,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.selection.selectable
@@ -64,6 +65,8 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DatePicker
+import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ElevatedCard
@@ -82,6 +85,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TimePicker
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.material3.rememberTimePickerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -109,6 +113,7 @@ import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -117,6 +122,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import io.github.c1921.pillring.notification.ReminderNotifier
 import io.github.c1921.pillring.notification.ReminderPlan
+import io.github.c1921.pillring.notification.ReminderRepeatMode
 import io.github.c1921.pillring.notification.ReminderScheduler
 import io.github.c1921.pillring.notification.ReminderContract
 import io.github.c1921.pillring.notification.ReminderSessionStore
@@ -133,10 +139,14 @@ import io.github.c1921.pillring.update.UpdateStatus
 import io.github.c1921.pillring.update.UpdateUiState
 import io.github.c1921.pillring.ui.UiTestTags
 import io.github.c1921.pillring.ui.theme.PillRingTheme
+import java.time.Instant
+import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.LocalTime
 import java.time.ZoneId
+import java.time.ZoneOffset
 import java.time.format.DateTimeFormatter
+import java.time.format.FormatStyle
 import java.util.Locale
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -172,7 +182,10 @@ private data class PlanEditorState(
     val planId: String?,
     val initialName: String,
     val initialHour: Int,
-    val initialMinute: Int
+    val initialMinute: Int,
+    val initialRepeatMode: ReminderRepeatMode,
+    val initialIntervalDays: Int,
+    val initialStartDateEpochDay: Long?
 )
 
 class MainActivity : ComponentActivity() {
@@ -374,7 +387,10 @@ class MainActivity : ComponentActivity() {
                                     planId = plan.id,
                                     initialName = plan.name,
                                     initialHour = plan.hour,
-                                    initialMinute = plan.minute
+                                    initialMinute = plan.minute,
+                                    initialRepeatMode = plan.repeatMode,
+                                    initialIntervalDays = plan.intervalDays,
+                                    initialStartDateEpochDay = plan.startDateEpochDay
                                 )
                             },
                             onDeletePlanClick = { plan ->
@@ -515,23 +531,38 @@ class MainActivity : ComponentActivity() {
                         initialName = editor.initialName,
                         initialHour = editor.initialHour,
                         initialMinute = editor.initialMinute,
+                        initialRepeatMode = editor.initialRepeatMode,
+                        initialIntervalDays = editor.initialIntervalDays,
+                        initialStartDateEpochDay = editor.initialStartDateEpochDay,
                         maxNameLength = MAX_PLAN_NAME_LENGTH,
                         onDismiss = {
                             planEditorState = null
                         },
-                        onSave = { name, hour, minute ->
+                        onSave = {
+                                name,
+                                hour,
+                                minute,
+                                repeatMode,
+                                intervalDays,
+                                startDateEpochDay ->
                             val saved = if (editor.planId == null) {
                                 addPlan(
                                     name = name,
                                     hour = hour,
-                                    minute = minute
+                                    minute = minute,
+                                    repeatMode = repeatMode,
+                                    intervalDays = intervalDays,
+                                    startDateEpochDay = startDateEpochDay
                                 )
                             } else {
                                 editPlan(
                                     planId = editor.planId,
                                     name = name,
                                     hour = hour,
-                                    minute = minute
+                                    minute = minute,
+                                    repeatMode = repeatMode,
+                                    intervalDays = intervalDays,
+                                    startDateEpochDay = startDateEpochDay
                                 )
                             }
 
@@ -572,7 +603,10 @@ class MainActivity : ComponentActivity() {
             planId = null,
             initialName = getString(R.string.default_plan_name, nextIndex),
             initialHour = defaultTime.hour,
-            initialMinute = defaultTime.minute
+            initialMinute = defaultTime.minute,
+            initialRepeatMode = ReminderRepeatMode.DAILY,
+            initialIntervalDays = 1,
+            initialStartDateEpochDay = null
         )
     }
 
@@ -609,7 +643,10 @@ class MainActivity : ComponentActivity() {
     private fun addPlan(
         name: String,
         hour: Int,
-        minute: Int
+        minute: Int,
+        repeatMode: ReminderRepeatMode,
+        intervalDays: Int,
+        startDateEpochDay: Long?
     ): Boolean {
         if (name.isBlank()) {
             Toast.makeText(
@@ -637,7 +674,10 @@ class MainActivity : ComponentActivity() {
                 name = name.trim(),
                 hour = hour,
                 minute = minute,
-                enabled = true
+                enabled = true,
+                repeatMode = repeatMode,
+                intervalDays = intervalDays,
+                startDateEpochDay = startDateEpochDay
             )
         } catch (_: Exception) {
             Toast.makeText(
@@ -648,7 +688,7 @@ class MainActivity : ComponentActivity() {
             return false
         }
 
-        val scheduled = scheduleNextDailyReminder(
+        val scheduled = scheduleNextPlanReminder(
             plan = plan,
             reason = getString(R.string.reason_plan_enabled)
         )
@@ -675,7 +715,10 @@ class MainActivity : ComponentActivity() {
         planId: String,
         name: String,
         hour: Int,
-        minute: Int
+        minute: Int,
+        repeatMode: ReminderRepeatMode,
+        intervalDays: Int,
+        startDateEpochDay: Long?
     ): Boolean {
         val currentPlan = ReminderSessionStore.getPlan(this, planId) ?: return false
         if (name.isBlank()) {
@@ -690,14 +733,17 @@ class MainActivity : ComponentActivity() {
         val updatedPlan = currentPlan.copy(
             name = name.trim(),
             hour = hour,
-            minute = minute
+            minute = minute,
+            repeatMode = repeatMode,
+            intervalDays = intervalDays,
+            startDateEpochDay = startDateEpochDay
         )
 
         if (currentPlan.enabled) {
             if (!ensureReminderSchedulingAllowed()) {
                 return false
             }
-            val scheduled = scheduleNextDailyReminder(
+            val scheduled = scheduleNextPlanReminder(
                 plan = updatedPlan,
                 reason = getString(R.string.reason_time_updated)
             )
@@ -750,7 +796,7 @@ class MainActivity : ComponentActivity() {
             }
             val enabledPlan = plan.copy(enabled = true)
             ReminderSessionStore.updatePlan(this, enabledPlan)
-            val scheduled = scheduleNextDailyReminder(
+            val scheduled = scheduleNextPlanReminder(
                 plan = enabledPlan,
                 reason = getString(R.string.reason_plan_enabled)
             )
@@ -809,15 +855,14 @@ class MainActivity : ComponentActivity() {
         ).show()
     }
 
-    private fun scheduleNextDailyReminder(
+    private fun scheduleNextPlanReminder(
         plan: ReminderPlan,
         reason: String
     ): Boolean {
-        val triggerAtMs = ReminderTimeCalculator.computeNextDailyTriggerAtMs(
+        val triggerAtMs = ReminderTimeCalculator.computeNextTriggerAtMs(
             nowMs = System.currentTimeMillis(),
             zoneId = ZoneId.systemDefault(),
-            hour = plan.hour,
-            minute = plan.minute
+            plan = plan
         )
 
         return ReminderScheduler.scheduleDailyAt(
@@ -834,7 +879,7 @@ class MainActivity : ComponentActivity() {
             if (!plan.enabled) {
                 return@forEach
             }
-            scheduleNextDailyReminder(
+            scheduleNextPlanReminder(
                 plan = plan,
                 reason = getString(R.string.reason_plan_enabled)
             )
@@ -1031,6 +1076,19 @@ private fun PlanCard(
             minute = plan.minute
         )
     }
+    val repeatSummaryText = remember(
+        plan.repeatMode,
+        plan.intervalDays,
+        plan.startDateEpochDay,
+        context
+    ) {
+        formatRepeatSummary(
+            context = context,
+            repeatMode = plan.repeatMode,
+            intervalDays = plan.intervalDays,
+            startDateEpochDay = plan.startDateEpochDay
+        )
+    }
     var showMenu by rememberSaveable(plan.id) {
         mutableStateOf(false)
     }
@@ -1087,6 +1145,11 @@ private fun PlanCard(
                     )
                     Text(
                         text = stringResource(R.string.label_selected_time, timeText),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Text(
+                        text = repeatSummaryText,
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -1708,10 +1771,16 @@ private fun PlanEditorDialog(
     initialName: String,
     initialHour: Int,
     initialMinute: Int,
+    initialRepeatMode: ReminderRepeatMode,
+    initialIntervalDays: Int,
+    initialStartDateEpochDay: Long?,
     maxNameLength: Int,
     onDismiss: () -> Unit,
-    onSave: (String, Int, Int) -> Unit
+    onSave: (String, Int, Int, ReminderRepeatMode, Int, Long?) -> Unit
 ) {
+    val todayEpochDay = remember {
+        LocalDate.now(ZoneId.systemDefault()).toEpochDay()
+    }
     var name by rememberSaveable(initialName, planId) {
         mutableStateOf(initialName)
     }
@@ -1721,7 +1790,19 @@ private fun PlanEditorDialog(
     var minute by rememberSaveable(initialMinute, planId) {
         mutableStateOf(initialMinute)
     }
+    var repeatMode by rememberSaveable(initialRepeatMode, planId) {
+        mutableStateOf(initialRepeatMode)
+    }
+    var intervalDaysInput by rememberSaveable(initialIntervalDays, planId) {
+        mutableStateOf(initialIntervalDays.toString())
+    }
+    var startDateEpochDay by rememberSaveable(initialStartDateEpochDay, planId) {
+        mutableStateOf(initialStartDateEpochDay)
+    }
     var showTimePicker by rememberSaveable(planId) {
+        mutableStateOf(false)
+    }
+    var showStartDatePicker by rememberSaveable(planId) {
         mutableStateOf(false)
     }
     val context = LocalContext.current
@@ -1732,6 +1813,15 @@ private fun PlanEditorDialog(
             minute = minute
         )
     }
+    val intervalDays = intervalDaysInput.toIntOrNull()
+    val isIntervalDaysValid = intervalDays in 1..365
+    val requiresIntervalConfig = repeatMode == ReminderRepeatMode.INTERVAL_DAYS
+    val selectedStartDateText = remember(startDateEpochDay) {
+        startDateEpochDay?.let { formatReminderDate(LocalDate.ofEpochDay(it)) }
+    }
+    val canSave = name.trim().isNotEmpty() && (
+        !requiresIntervalConfig || (isIntervalDaysValid && startDateEpochDay != null)
+    )
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -1793,14 +1883,128 @@ private fun PlanEditorDialog(
                 ) {
                     Text(text = stringResource(R.string.btn_select_time))
                 }
+                Text(
+                    text = stringResource(R.string.label_repeat_mode),
+                    style = MaterialTheme.typography.labelLarge
+                )
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .selectable(
+                            selected = repeatMode == ReminderRepeatMode.DAILY,
+                            onClick = {
+                                repeatMode = ReminderRepeatMode.DAILY
+                            },
+                            role = Role.RadioButton
+                        )
+                        .testTag(UiTestTags.PLAN_EDITOR_REPEAT_MODE_DAILY),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    RadioButton(
+                        selected = repeatMode == ReminderRepeatMode.DAILY,
+                        onClick = null
+                    )
+                    Text(
+                        text = stringResource(R.string.option_repeat_daily),
+                        style = MaterialTheme.typography.bodyLarge
+                    )
+                }
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .selectable(
+                            selected = repeatMode == ReminderRepeatMode.INTERVAL_DAYS,
+                            onClick = {
+                                repeatMode = ReminderRepeatMode.INTERVAL_DAYS
+                                if (startDateEpochDay == null) {
+                                    startDateEpochDay = todayEpochDay
+                                }
+                            },
+                            role = Role.RadioButton
+                        )
+                        .testTag(UiTestTags.PLAN_EDITOR_REPEAT_MODE_INTERVAL_DAYS),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    RadioButton(
+                        selected = repeatMode == ReminderRepeatMode.INTERVAL_DAYS,
+                        onClick = null
+                    )
+                    Text(
+                        text = stringResource(R.string.option_repeat_interval_days),
+                        style = MaterialTheme.typography.bodyLarge
+                    )
+                }
+
+                if (repeatMode == ReminderRepeatMode.INTERVAL_DAYS) {
+                    OutlinedTextField(
+                        value = intervalDaysInput,
+                        onValueChange = { changed ->
+                            if (changed.length <= 3 && changed.all { it.isDigit() }) {
+                                intervalDaysInput = changed
+                            }
+                        },
+                        label = { Text(stringResource(R.string.label_interval_days)) },
+                        supportingText = {
+                            Text(text = stringResource(R.string.label_interval_days_supporting))
+                        },
+                        singleLine = true,
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                        isError = intervalDaysInput.isNotEmpty() && !isIntervalDaysValid,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .testTag(UiTestTags.PLAN_EDITOR_INTERVAL_DAYS_INPUT)
+                    )
+                    Surface(
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = MaterialTheme.shapes.medium,
+                        color = MaterialTheme.colorScheme.secondaryContainer
+                    ) {
+                        val startDateLabel = selectedStartDateText
+                            ?: stringResource(R.string.label_start_date_not_selected)
+                        Text(
+                            text = stringResource(R.string.label_selected_start_date, startDateLabel),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSecondaryContainer,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 12.dp, vertical = 10.dp)
+                                .testTag(UiTestTags.PLAN_EDITOR_SELECTED_START_DATE)
+                        )
+                    }
+                    FilledTonalButton(
+                        onClick = {
+                            showStartDatePicker = true
+                        },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .testTag(UiTestTags.PLAN_EDITOR_SELECT_START_DATE_BUTTON)
+                    ) {
+                        Text(text = stringResource(R.string.btn_select_start_date))
+                    }
+                }
             }
         },
         confirmButton = {
             Button(
                 onClick = {
-                    onSave(name.trim(), hour, minute)
+                    onSave(
+                        name.trim(),
+                        hour,
+                        minute,
+                        repeatMode,
+                        if (repeatMode == ReminderRepeatMode.INTERVAL_DAYS) {
+                            requireNotNull(intervalDays)
+                        } else {
+                            1
+                        },
+                        if (repeatMode == ReminderRepeatMode.INTERVAL_DAYS) {
+                            startDateEpochDay
+                        } else {
+                            null
+                        }
+                    )
                 },
-                enabled = name.trim().isNotEmpty()
+                enabled = canSave
             ) {
                 Text(text = stringResource(R.string.dialog_btn_save))
             }
@@ -1824,6 +2028,19 @@ private fun PlanEditorDialog(
                 hour = selectedHour
                 minute = selectedMinute
                 showTimePicker = false
+            }
+        )
+    }
+
+    if (showStartDatePicker) {
+        PlanStartDatePickerDialog(
+            initialStartDateEpochDay = startDateEpochDay ?: todayEpochDay,
+            onDismiss = {
+                showStartDatePicker = false
+            },
+            onConfirm = { selectedEpochDay ->
+                startDateEpochDay = selectedEpochDay
+                showStartDatePicker = false
             }
         )
     }
@@ -1878,6 +2095,53 @@ private fun PlanTimePickerDialog(
     )
 }
 
+@Composable
+@OptIn(ExperimentalMaterial3Api::class)
+private fun PlanStartDatePickerDialog(
+    initialStartDateEpochDay: Long,
+    onDismiss: () -> Unit,
+    onConfirm: (Long) -> Unit
+) {
+    val pickerState = rememberDatePickerState(
+        initialSelectedDateMillis = LocalDate.ofEpochDay(initialStartDateEpochDay)
+            .atStartOfDay()
+            .toInstant(ZoneOffset.UTC)
+            .toEpochMilli()
+    )
+
+    DatePickerDialog(
+        onDismissRequest = onDismiss,
+        confirmButton = {
+            TextButton(
+                onClick = {
+                    val selectedDateMillis = pickerState.selectedDateMillis ?: return@TextButton
+                    val selectedEpochDay = Instant.ofEpochMilli(selectedDateMillis)
+                        .atOffset(ZoneOffset.UTC)
+                        .toLocalDate()
+                        .toEpochDay()
+                    onConfirm(selectedEpochDay)
+                },
+                modifier = Modifier.testTag(UiTestTags.PLAN_START_DATE_PICKER_CONFIRM)
+            ) {
+                Text(text = stringResource(R.string.dialog_btn_save))
+            }
+        },
+        dismissButton = {
+            TextButton(
+                onClick = onDismiss,
+                modifier = Modifier.testTag(UiTestTags.PLAN_START_DATE_PICKER_CANCEL)
+            ) {
+                Text(text = stringResource(R.string.dialog_btn_cancel))
+            }
+        }
+    ) {
+        DatePicker(
+            state = pickerState,
+            modifier = Modifier.testTag(UiTestTags.PLAN_START_DATE_PICKER)
+        )
+    }
+}
+
 private fun formatReminderTime(
     context: Context,
     hour: Int,
@@ -1886,6 +2150,34 @@ private fun formatReminderTime(
     val pattern = if (DateFormat.is24HourFormat(context)) "HH:mm" else "h:mm a"
     val formatter = DateTimeFormatter.ofPattern(pattern, Locale.getDefault())
     return LocalTime.of(hour, minute).format(formatter)
+}
+
+private fun formatRepeatSummary(
+    context: Context,
+    repeatMode: ReminderRepeatMode,
+    intervalDays: Int,
+    startDateEpochDay: Long?
+): String {
+    return when (repeatMode) {
+        ReminderRepeatMode.DAILY -> context.getString(R.string.label_repeat_summary_daily)
+        ReminderRepeatMode.INTERVAL_DAYS -> {
+            if (intervalDays !in 1..365 || startDateEpochDay == null) {
+                context.getString(R.string.label_repeat_summary_daily)
+            } else {
+                context.getString(
+                    R.string.label_repeat_summary_interval,
+                    intervalDays,
+                    formatReminderDate(LocalDate.ofEpochDay(startDateEpochDay))
+                )
+            }
+        }
+    }
+}
+
+private fun formatReminderDate(date: LocalDate): String {
+    val formatter = DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM)
+        .withLocale(Locale.getDefault())
+    return date.format(formatter)
 }
 
 @Composable

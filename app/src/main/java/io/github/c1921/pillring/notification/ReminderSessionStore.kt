@@ -19,6 +19,9 @@ object ReminderSessionStore {
     private const val PLAN_NAME = "name"
     private const val PLAN_HOUR = "hour"
     private const val PLAN_MINUTE = "minute"
+    private const val PLAN_REPEAT_MODE = "repeat_mode"
+    private const val PLAN_INTERVAL_DAYS = "interval_days"
+    private const val PLAN_START_DATE_EPOCH_DAY = "start_date_epoch_day"
     private const val PLAN_ENABLED = "enabled"
     private const val PLAN_NOTIFICATION_ID = "notification_id"
     private const val PLAN_IS_REMINDER_ACTIVE = "is_reminder_active"
@@ -41,9 +44,18 @@ object ReminderSessionStore {
         name: String,
         hour: Int,
         minute: Int,
-        enabled: Boolean = true
+        enabled: Boolean = true,
+        repeatMode: ReminderRepeatMode = ReminderRepeatMode.DAILY,
+        intervalDays: Int = 1,
+        startDateEpochDay: Long? = null
     ): ReminderPlan {
         validateTime(hour = hour, minute = minute)
+        val normalizedRepeatConfig = normalizeRepeatConfig(
+            repeatMode = repeatMode,
+            intervalDays = intervalDays,
+            startDateEpochDay = startDateEpochDay,
+            strict = true
+        )
         val normalizedName = name.trim().takeIf { it.isNotEmpty() }
             ?: throw IllegalArgumentException("plan name must not be blank")
 
@@ -60,6 +72,9 @@ object ReminderSessionStore {
                 name = normalizedName,
                 hour = hour,
                 minute = minute,
+                repeatMode = normalizedRepeatConfig.repeatMode,
+                intervalDays = normalizedRepeatConfig.intervalDays,
+                startDateEpochDay = normalizedRepeatConfig.startDateEpochDay,
                 enabled = enabled,
                 notificationId = allocateNotificationId(preferences),
                 isReminderActive = false,
@@ -76,6 +91,12 @@ object ReminderSessionStore {
         plan: ReminderPlan
     ) {
         validateTime(hour = plan.hour, minute = plan.minute)
+        val normalizedRepeatConfig = normalizeRepeatConfig(
+            repeatMode = plan.repeatMode,
+            intervalDays = plan.intervalDays,
+            startDateEpochDay = plan.startDateEpochDay,
+            strict = true
+        )
         val normalizedName = plan.name.trim().takeIf { it.isNotEmpty() }
             ?: throw IllegalArgumentException("plan name must not be blank")
 
@@ -87,7 +108,12 @@ object ReminderSessionStore {
             if (targetIndex < 0) {
                 return
             }
-            plans[targetIndex] = plan.copy(name = normalizedName)
+            plans[targetIndex] = plan.copy(
+                name = normalizedName,
+                repeatMode = normalizedRepeatConfig.repeatMode,
+                intervalDays = normalizedRepeatConfig.intervalDays,
+                startDateEpochDay = normalizedRepeatConfig.startDateEpochDay
+            )
             savePlans(preferences = preferences, plans = plans)
         }
     }
@@ -281,6 +307,25 @@ object ReminderSessionStore {
                     if (notificationId <= 0) {
                         continue
                     }
+                    val repeatMode = item.optString(
+                        PLAN_REPEAT_MODE,
+                        ReminderRepeatMode.DAILY.name
+                    ).toRepeatModeOrNull() ?: ReminderRepeatMode.DAILY
+                    val intervalDays = item.optInt(PLAN_INTERVAL_DAYS, 1)
+                    val startDateEpochDay = if (
+                        item.has(PLAN_START_DATE_EPOCH_DAY) &&
+                        !item.isNull(PLAN_START_DATE_EPOCH_DAY)
+                    ) {
+                        item.optLong(PLAN_START_DATE_EPOCH_DAY)
+                    } else {
+                        null
+                    }
+                    val normalizedRepeatConfig = normalizeRepeatConfig(
+                        repeatMode = repeatMode,
+                        intervalDays = intervalDays,
+                        startDateEpochDay = startDateEpochDay,
+                        strict = false
+                    )
                     val name = item.optString(PLAN_NAME).trim()
                     add(
                         ReminderPlan(
@@ -288,6 +333,9 @@ object ReminderSessionStore {
                             name = name.ifEmpty { "Plan" },
                             hour = hour,
                             minute = minute,
+                            repeatMode = normalizedRepeatConfig.repeatMode,
+                            intervalDays = normalizedRepeatConfig.intervalDays,
+                            startDateEpochDay = normalizedRepeatConfig.startDateEpochDay,
                             enabled = item.optBoolean(PLAN_ENABLED, false),
                             notificationId = notificationId,
                             isReminderActive = item.optBoolean(PLAN_IS_REMINDER_ACTIVE, false),
@@ -313,6 +361,9 @@ object ReminderSessionStore {
                     .put(PLAN_NAME, plan.name)
                     .put(PLAN_HOUR, plan.hour)
                     .put(PLAN_MINUTE, plan.minute)
+                    .put(PLAN_REPEAT_MODE, plan.repeatMode.name)
+                    .put(PLAN_INTERVAL_DAYS, plan.intervalDays)
+                    .put(PLAN_START_DATE_EPOCH_DAY, plan.startDateEpochDay)
                     .put(PLAN_ENABLED, plan.enabled)
                     .put(PLAN_NOTIFICATION_ID, plan.notificationId)
                     .put(PLAN_IS_REMINDER_ACTIVE, plan.isReminderActive)
@@ -337,6 +388,53 @@ object ReminderSessionStore {
         require(hour in 0..23) { "hour must be in 0..23" }
         require(minute in 0..59) { "minute must be in 0..59" }
     }
+
+    private fun normalizeRepeatConfig(
+        repeatMode: ReminderRepeatMode,
+        intervalDays: Int,
+        startDateEpochDay: Long?,
+        strict: Boolean
+    ): RepeatConfig {
+        if (repeatMode == ReminderRepeatMode.DAILY) {
+            return RepeatConfig(
+                repeatMode = ReminderRepeatMode.DAILY,
+                intervalDays = 1,
+                startDateEpochDay = null
+            )
+        }
+
+        val isIntervalValid = intervalDays in 1..365
+        val isStartDateValid = startDateEpochDay != null
+
+        if (isIntervalValid && isStartDateValid) {
+            return RepeatConfig(
+                repeatMode = ReminderRepeatMode.INTERVAL_DAYS,
+                intervalDays = intervalDays,
+                startDateEpochDay = startDateEpochDay
+            )
+        }
+
+        if (strict) {
+            require(isIntervalValid) { "intervalDays must be in 1..365" }
+            require(isStartDateValid) { "startDateEpochDay must not be null for interval mode" }
+        }
+
+        return RepeatConfig(
+            repeatMode = ReminderRepeatMode.DAILY,
+            intervalDays = 1,
+            startDateEpochDay = null
+        )
+    }
+
+    private fun String.toRepeatModeOrNull(): ReminderRepeatMode? {
+        return ReminderRepeatMode.entries.firstOrNull { it.name == this }
+    }
+
+    private data class RepeatConfig(
+        val repeatMode: ReminderRepeatMode,
+        val intervalDays: Int,
+        val startDateEpochDay: Long?
+    )
 
     private fun prefs(context: Context) =
         context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)

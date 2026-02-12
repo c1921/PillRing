@@ -51,17 +51,16 @@ class ReminderAlarmReceiver : BroadcastReceiver() {
         val triggeredPlan = ReminderSessionStore.getPlan(context, planId) ?: return
         ReminderNotifier.showNotification(context = context, plan = triggeredPlan, reason = reason)
 
-        val nextTriggerAtMs = ReminderTimeCalculator.computeNextDailyTriggerAtMs(
+        val nextTriggerAtMs = ReminderTimeCalculator.computeNextTriggerAtMs(
             nowMs = System.currentTimeMillis(),
             zoneId = ZoneId.systemDefault(),
-            hour = triggeredPlan.hour,
-            minute = triggeredPlan.minute
+            plan = triggeredPlan
         )
         ReminderScheduler.scheduleDailyAt(
             context = context,
             plan = triggeredPlan,
             triggerAtMs = nextTriggerAtMs,
-            reason = context.getString(R.string.reason_daily_scheduled)
+            reason = context.getString(R.string.reason_plan_scheduled)
         )
     }
 

@@ -32,7 +32,15 @@ object UiTestTags {
 
     const val PLAN_EDITOR_SELECTED_TIME = "plan_editor_selected_time"
     const val PLAN_EDITOR_SELECT_TIME_BUTTON = "plan_editor_select_time_button"
+    const val PLAN_EDITOR_REPEAT_MODE_DAILY = "plan_editor_repeat_mode_daily"
+    const val PLAN_EDITOR_REPEAT_MODE_INTERVAL_DAYS = "plan_editor_repeat_mode_interval_days"
+    const val PLAN_EDITOR_INTERVAL_DAYS_INPUT = "plan_editor_interval_days_input"
+    const val PLAN_EDITOR_SELECTED_START_DATE = "plan_editor_selected_start_date"
+    const val PLAN_EDITOR_SELECT_START_DATE_BUTTON = "plan_editor_select_start_date_button"
     const val PLAN_TIME_PICKER = "plan_time_picker"
     const val PLAN_TIME_PICKER_CONFIRM = "plan_time_picker_confirm"
     const val PLAN_TIME_PICKER_CANCEL = "plan_time_picker_cancel"
+    const val PLAN_START_DATE_PICKER = "plan_start_date_picker"
+    const val PLAN_START_DATE_PICKER_CONFIRM = "plan_start_date_picker_confirm"
+    const val PLAN_START_DATE_PICKER_CANCEL = "plan_start_date_picker_cancel"
 }
