@@ -4,8 +4,10 @@ import android.content.Context
 import android.text.format.DateFormat
 import io.github.c1921.pillring.R
 import io.github.c1921.pillring.notification.ReminderRepeatMode
+import java.time.Instant
 import java.time.LocalDate
 import java.time.LocalTime
+import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.time.format.FormatStyle
 import java.util.Locale
@@ -47,4 +49,15 @@ internal fun formatReminderDate(date: LocalDate): String {
     val formatter = DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM)
         .withLocale(Locale.getDefault())
     return date.format(formatter)
+}
+
+internal fun formatReminderDateTime(epochMs: Long): String {
+    val formatter = DateTimeFormatter.ofLocalizedDateTime(
+        FormatStyle.MEDIUM,
+        FormatStyle.SHORT
+    ).withLocale(Locale.getDefault())
+    return Instant.ofEpochMilli(epochMs)
+        .atZone(ZoneId.systemDefault())
+        .toLocalDateTime()
+        .format(formatter)
 }

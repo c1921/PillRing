@@ -1,6 +1,7 @@
 package io.github.c1921.pillring.ui
 
 object UiTestTags {
+    const val HOME_LOG_BUTTON = "home_log_button"
     const val HOME_SETTINGS_BUTTON = "home_settings_button"
     const val HOME_ADD_PLAN_FAB = "home_add_plan_fab"
     const val SETTINGS_BACK_BUTTON = "settings_back_button"
@@ -29,6 +30,9 @@ object UiTestTags {
     const val REMINDER_CONFIRM_SECONDARY_CONTENT = "reminder_confirm_secondary_content"
     const val REMINDER_CONFIRM_HOLD_PROGRESS = "reminder_confirm_hold_progress"
     const val REMINDER_CONFIRM_HOLD_HINT = "reminder_confirm_hold_hint"
+    const val REMINDER_LOG_SCREEN = "reminder_log_screen"
+    const val REMINDER_LOG_EMPTY = "reminder_log_empty"
+    const val REMINDER_LOG_ENTRY = "reminder_log_entry"
 
     const val PLAN_EDITOR_SELECTED_TIME = "plan_editor_selected_time"
     const val PLAN_EDITOR_SELECT_TIME_BUTTON = "plan_editor_select_time_button"

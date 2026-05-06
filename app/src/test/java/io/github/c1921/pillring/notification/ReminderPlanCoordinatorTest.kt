@@ -131,17 +131,66 @@ class ReminderPlanCoordinatorTest {
         assertEquals(listOf("p1"), notifications.cancelForPlanIds)
     }
 
+    @Test
+    fun confirmStopReminder_success_recordsManualConfirmation() {
+        val existingPlan = basePlan(
+            id = "p1",
+            name = "Evening",
+            hour = 21,
+            minute = 0,
+            enabled = true,
+            isReminderActive = true
+        )
+        val store = FakePlanStore(initialPlans = listOf(existingPlan))
+        val alarms = FakeAlarmService(scheduleResult = true)
+        val notifications = FakeNotificationService()
+        val logWriter = FakeReminderLogWriter()
+        val coordinator = newCoordinator(
+            store = store,
+            alarms = alarms,
+            notifications = notifications,
+            logWriter = logWriter
+        )
+
+        val result = coordinator.confirmStopReminder("p1")
+
+        assertTrue(result is PlanMutationResult.Success)
+        assertEquals(listOf("p1"), logWriter.manualConfirmationPlanIds)
+        assertEquals(listOf(1_000L), logWriter.manualConfirmationOccurredAtMs)
+    }
+
+    @Test
+    fun confirmStopReminder_missingPlan_doesNotRecordManualConfirmation() {
+        val logWriter = FakeReminderLogWriter()
+        val coordinator = newCoordinator(
+            store = FakePlanStore(),
+            alarms = FakeAlarmService(scheduleResult = true),
+            notifications = FakeNotificationService(),
+            logWriter = logWriter
+        )
+
+        val result = coordinator.confirmStopReminder("missing")
+
+        assertEquals(
+            PlanMutationResult.Failure(PlanMutationFailureReason.PLAN_NOT_FOUND),
+            result
+        )
+        assertTrue(logWriter.manualConfirmationPlanIds.isEmpty())
+    }
+
     private fun newCoordinator(
         store: ReminderPlanStore,
         alarms: ReminderAlarmService,
-        notifications: ReminderNotificationService
+        notifications: ReminderNotificationService,
+        logWriter: ReminderLogWriter = NoOpReminderLogWriter
     ): ReminderPlanCoordinator {
         return ReminderPlanCoordinator(
             nowProvider = { 1_000L },
             zoneIdProvider = { ZoneId.of("UTC") },
             store = store,
             alarmService = alarms,
-            notificationService = notifications
+            notificationService = notifications,
+            logWriter = logWriter
         )
     }
 
@@ -272,6 +321,19 @@ class ReminderPlanCoordinatorTest {
 
         override fun cancelReminderNotification(plan: ReminderPlan) {
             cancelForPlanIds += plan.id
+        }
+    }
+
+    private class FakeReminderLogWriter : ReminderLogWriter {
+        val manualConfirmationPlanIds = mutableListOf<String>()
+        val manualConfirmationOccurredAtMs = mutableListOf<Long>()
+
+        override fun recordManualConfirmation(
+            plan: ReminderPlan,
+            occurredAtEpochMs: Long
+        ) {
+            manualConfirmationPlanIds += plan.id
+            manualConfirmationOccurredAtMs += occurredAtEpochMs
         }
     }
 }

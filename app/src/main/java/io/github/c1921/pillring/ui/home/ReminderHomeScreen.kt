@@ -10,6 +10,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.outlined.History
 import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ElevatedCard
@@ -45,6 +46,7 @@ internal fun ReminderHomeScreen(
     onMoveUpClick: (ReminderPlan) -> Unit,
     onMoveDownClick: (ReminderPlan) -> Unit,
     onPlanEnabledChange: (ReminderPlan, Boolean) -> Unit,
+    onOpenLogClick: () -> Unit,
     onOpenSettingsClick: () -> Unit,
     onOpenReminderConfirmFromPlanCard: (ReminderPlan) -> Unit
 ) {
@@ -61,6 +63,15 @@ internal fun ReminderHomeScreen(
                     )
                 },
                 actions = {
+                    IconButton(
+                        onClick = onOpenLogClick,
+                        modifier = Modifier.testTag(UiTestTags.HOME_LOG_BUTTON)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Outlined.History,
+                            contentDescription = stringResource(R.string.cd_open_reminder_log)
+                        )
+                    }
                     IconButton(
                         onClick = onOpenSettingsClick,
                         modifier = Modifier.testTag(UiTestTags.HOME_SETTINGS_BUTTON)
@@ -202,6 +213,7 @@ private fun ReminderHomeScreenPreview() {
             onMoveUpClick = {},
             onMoveDownClick = {},
             onPlanEnabledChange = { _, _ -> },
+            onOpenLogClick = {},
             onOpenSettingsClick = {},
             onOpenReminderConfirmFromPlanCard = {}
         )

@@ -19,6 +19,7 @@
     <string name="btn_move_up">上移</string>
     <string name="btn_move_down">下移</string>
     <string name="btn_confirm_stop_plan_reminder">确认并停止该计划提醒</string>
+    <string name="cd_open_reminder_log">打开提醒日志</string>
     <string name="cd_open_settings">打开设置</string>
     <string name="cd_navigate_back">返回上一页</string>
     <string name="cd_more_plan_actions">更多计划操作</string>
@@ -65,6 +66,14 @@
     <string name="reminder_confirm_secondary_title">提醒详情</string>
     <string name="reminder_confirm_plan_label">计划：%1$s</string>
     <string name="reminder_confirm_time_label">提醒时间：%1$s</string>
+    <string name="reminder_log_page_title">提醒日志</string>
+    <string name="reminder_log_empty_title">暂无日志记录</string>
+    <string name="reminder_log_empty_description">提醒触发和手动确认记录会显示在这里。</string>
+    <string name="reminder_log_event_triggered">提醒已触发</string>
+    <string name="reminder_log_event_confirmed">已手动确认</string>
+    <string name="reminder_log_plan_label">计划：%1$s</string>
+    <string name="reminder_log_recorded_at_label">记录时间：%1$s</string>
+    <string name="reminder_log_scheduled_time_label">计划时间：%1$s</string>
 
     <string name="settings_page_title">设置</string>
     <string name="settings_language_title">语言</string>

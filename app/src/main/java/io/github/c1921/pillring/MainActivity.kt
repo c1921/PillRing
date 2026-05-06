@@ -25,6 +25,8 @@ import androidx.core.net.toUri
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import io.github.c1921.pillring.notification.ReminderPlan
+import io.github.c1921.pillring.notification.ReminderLogEntry
+import io.github.c1921.pillring.notification.ReminderLogStore
 import io.github.c1921.pillring.notification.PlanMutationFailureReason
 import io.github.c1921.pillring.notification.PlanMutationResult
 import io.github.c1921.pillring.notification.PlanMutationSuccessType
@@ -42,6 +44,7 @@ import io.github.c1921.pillring.update.AppUpdateRepository
 import io.github.c1921.pillring.update.UpdateStatus
 import io.github.c1921.pillring.update.UpdateUiState
 import io.github.c1921.pillring.ui.home.ReminderHomeScreen
+import io.github.c1921.pillring.ui.log.ReminderLogScreen
 import io.github.c1921.pillring.ui.plan.PlanEditorDialog
 import io.github.c1921.pillring.ui.reminder.ReminderConfirmScreen
 import io.github.c1921.pillring.ui.settings.AboutSettingsScreen
@@ -60,6 +63,7 @@ private enum class AppScreen {
     SETTINGS_LANGUAGE,
     SETTINGS_PERMISSION,
     SETTINGS_ABOUT,
+    REMINDER_LOG,
     REMINDER_CONFIRM
 }
 
@@ -92,6 +96,9 @@ class MainActivity : ComponentActivity() {
         setContent {
             var plans by remember {
                 mutableStateOf(loadPlans())
+            }
+            var reminderLogs by remember {
+                mutableStateOf(loadReminderLogs())
             }
             var permissionItems by remember {
                 mutableStateOf(buildPermissionItems())
@@ -126,6 +133,7 @@ class MainActivity : ComponentActivity() {
                 val observer = LifecycleEventObserver { _, event ->
                     if (event == Lifecycle.Event.ON_RESUME) {
                         plans = loadPlans()
+                        reminderLogs = loadReminderLogs()
                         permissionItems = buildPermissionItems()
                         selectedLanguage =
                             AppLanguageManager.getSelectedLanguage(this@MainActivity)
@@ -236,7 +244,8 @@ class MainActivity : ComponentActivity() {
                 BackHandler(enabled = currentScreen != AppScreen.HOME) {
                     when (currentScreen) {
                         AppScreen.HOME -> Unit
-                        AppScreen.SETTINGS_OVERVIEW -> {
+                        AppScreen.SETTINGS_OVERVIEW,
+                        AppScreen.REMINDER_LOG -> {
                             reminderConfirmPlanId = null
                             currentScreen = AppScreen.HOME
                         }
@@ -299,6 +308,10 @@ class MainActivity : ComponentActivity() {
                                 plans = loadPlans()
                                 permissionItems = buildPermissionItems()
                             },
+                            onOpenLogClick = {
+                                reminderLogs = loadReminderLogs()
+                                currentScreen = AppScreen.REMINDER_LOG
+                            },
                             onOpenSettingsClick = {
                                 permissionItems = buildPermissionItems()
                                 currentScreen = AppScreen.SETTINGS_OVERVIEW
@@ -316,6 +329,13 @@ class MainActivity : ComponentActivity() {
                                     ).show()
                                 }
                             }
+                        )
+                    }
+
+                    AppScreen.REMINDER_LOG -> {
+                        ReminderLogScreen(
+                            entries = reminderLogs,
+                            onBackClick = { currentScreen = AppScreen.HOME }
                         )
                     }
 
@@ -383,6 +403,7 @@ class MainActivity : ComponentActivity() {
                                 },
                                 onConfirmCommitted = {
                                     confirmStopReminder(reminderPlan.id)
+                                    reminderLogs = loadReminderLogs()
                                 },
                                 onAutoExit = {
                                     plans = loadPlans()
@@ -477,6 +498,10 @@ class MainActivity : ComponentActivity() {
 
     private fun loadPlans(): List<ReminderPlan> {
         return planCoordinator.getPlans()
+    }
+
+    private fun loadReminderLogs(): List<ReminderLogEntry> {
+        return ReminderLogStore.getEntries(this)
     }
 
     private fun buildDefaultPlanEditorState(nextIndex: Int): PlanEditorState {

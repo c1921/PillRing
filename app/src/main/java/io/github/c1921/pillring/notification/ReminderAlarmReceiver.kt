@@ -49,6 +49,11 @@ class ReminderAlarmReceiver : BroadcastReceiver() {
 
         ReminderSessionStore.markReminderTriggered(context, planId)
         val triggeredPlan = ReminderSessionStore.getPlan(context, planId) ?: return
+        ReminderLogStore.recordReminderTriggered(
+            context = context,
+            plan = triggeredPlan,
+            occurredAtEpochMs = System.currentTimeMillis()
+        )
         ReminderNotifier.showNotification(context = context, plan = triggeredPlan, reason = reason)
 
         val nextTriggerAtMs = ReminderTimeCalculator.computeNextTriggerAtMs(

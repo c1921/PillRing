@@ -184,12 +184,42 @@ internal class AndroidReminderNotificationService(
     }
 }
 
+internal interface ReminderLogWriter {
+    fun recordManualConfirmation(
+        plan: ReminderPlan,
+        occurredAtEpochMs: Long
+    )
+}
+
+internal object NoOpReminderLogWriter : ReminderLogWriter {
+    override fun recordManualConfirmation(
+        plan: ReminderPlan,
+        occurredAtEpochMs: Long
+    ) = Unit
+}
+
+internal class AndroidReminderLogWriter(
+    private val context: Context
+) : ReminderLogWriter {
+    override fun recordManualConfirmation(
+        plan: ReminderPlan,
+        occurredAtEpochMs: Long
+    ) {
+        ReminderLogStore.recordManualConfirmation(
+            context = context,
+            plan = plan,
+            occurredAtEpochMs = occurredAtEpochMs
+        )
+    }
+}
+
 internal class ReminderPlanCoordinator(
     private val nowProvider: () -> Long = { System.currentTimeMillis() },
     private val zoneIdProvider: () -> ZoneId = { ZoneId.systemDefault() },
     private val store: ReminderPlanStore,
     private val alarmService: ReminderAlarmService,
-    private val notificationService: ReminderNotificationService
+    private val notificationService: ReminderNotificationService,
+    private val logWriter: ReminderLogWriter = NoOpReminderLogWriter
 ) {
     constructor(
         context: Context,
@@ -200,7 +230,8 @@ internal class ReminderPlanCoordinator(
         zoneIdProvider = zoneIdProvider,
         store = SharedPrefsReminderPlanStore(context),
         alarmService = AndroidReminderAlarmService(context),
-        notificationService = AndroidReminderNotificationService(context)
+        notificationService = AndroidReminderNotificationService(context),
+        logWriter = AndroidReminderLogWriter(context)
     )
 
     val maxPlanCount: Int
@@ -376,6 +407,10 @@ internal class ReminderPlanCoordinator(
         val plan = store.getPlan(planId)
             ?: return PlanMutationResult.Failure(PlanMutationFailureReason.PLAN_NOT_FOUND)
         store.markReminderConfirmed(plan.id)
+        logWriter.recordManualConfirmation(
+            plan = plan,
+            occurredAtEpochMs = nowProvider()
+        )
         alarmService.cancelPlanFallbackReminder(plan)
         notificationService.cancelReminderNotification(plan)
         return PlanMutationResult.Success(
