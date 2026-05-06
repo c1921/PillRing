@@ -61,7 +61,7 @@ class ReminderPlanCoordinatorTest {
     }
 
     @Test
-    fun editPlan_enabledPlan_scheduleFailure_doesNotPersistChanges() {
+    fun editPlan_enabledPlan_scheduleFailure_persistsChangesBeforeReturningFailure() {
         val existingPlan = basePlan(
             id = "p1",
             name = "Morning",
@@ -93,9 +93,52 @@ class ReminderPlanCoordinatorTest {
             result
         )
         val latest = store.getPlan("p1")
+        assertEquals("Morning Updated", latest?.name)
+        assertEquals(9, latest?.hour)
+        assertEquals(15, latest?.minute)
+        assertEquals(1, alarms.scheduleCalls)
+    }
+
+    @Test
+    fun editPlan_enabledPlan_saveFailure_doesNotScheduleNewAlarm() {
+        val existingPlan = basePlan(
+            id = "p1",
+            name = "Morning",
+            hour = 8,
+            minute = 0,
+            enabled = true
+        )
+        val store = FakePlanStore(
+            initialPlans = listOf(existingPlan),
+            updateFailure = true
+        )
+        val alarms = FakeAlarmService(scheduleResult = true)
+        val coordinator = newCoordinator(
+            store = store,
+            alarms = alarms,
+            notifications = FakeNotificationService()
+        )
+
+        val result = coordinator.editPlan(
+            planId = "p1",
+            name = "Morning Updated",
+            hour = 9,
+            minute = 15,
+            repeatMode = ReminderRepeatMode.DAILY,
+            intervalDays = 1,
+            startDateEpochDay = null,
+            scheduleReason = "test"
+        )
+
+        assertEquals(
+            PlanMutationResult.Failure(PlanMutationFailureReason.SAVE_FAILED),
+            result
+        )
+        val latest = store.getPlan("p1")
         assertEquals("Morning", latest?.name)
         assertEquals(8, latest?.hour)
         assertEquals(0, latest?.minute)
+        assertEquals(0, alarms.scheduleCalls)
     }
 
     @Test
@@ -218,7 +261,8 @@ class ReminderPlanCoordinatorTest {
     }
 
     private class FakePlanStore(
-        initialPlans: List<ReminderPlan> = emptyList()
+        initialPlans: List<ReminderPlan> = emptyList(),
+        private val updateFailure: Boolean = false
     ) : ReminderPlanStore {
         private val plans = initialPlans.toMutableList()
         private var nextNotificationId = 2000
@@ -258,6 +302,9 @@ class ReminderPlanCoordinatorTest {
         }
 
         override fun updatePlan(plan: ReminderPlan) {
+            if (updateFailure) {
+                throw IllegalStateException("update failed")
+            }
             val index = plans.indexOfFirst { it.id == plan.id }
             if (index >= 0) {
                 plans[index] = plan

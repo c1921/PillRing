@@ -86,7 +86,9 @@ class AppUpdateRepository(
             )
         }
 
-        store.saveResult(result)
+        if (result.status != UpdateStatus.FAILED) {
+            store.saveResult(result)
+        }
         return resolveResultForCurrentVersion(result, normalizedCurrentVersionName)
     }
 

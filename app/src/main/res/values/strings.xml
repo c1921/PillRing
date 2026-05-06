@@ -122,6 +122,7 @@
     <string name="reason_plan_enabled">Reminder plan enabled from home screen.</string>
     <string name="reason_time_updated">Reminder time updated while plan enabled.</string>
     <string name="reason_plan_scheduled">Reminder scheduled by repeat rules.</string>
+    <string name="reason_system_reschedule">Reminder rescheduled after device, app, or time settings changed.</string>
     <string name="reason_delete_fallback">Notification dismissed; fallback reminder in 30 seconds. Previous reason: %1$s</string>
     <string name="reason_unknown">unknown</string>
     <string name="btn_reminder_hold_to_confirm">Press and hold</string>

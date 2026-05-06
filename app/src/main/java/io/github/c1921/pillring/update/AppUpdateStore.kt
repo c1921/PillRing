@@ -17,7 +17,10 @@ class AppUpdateStore(context: Context) : UpdateStore {
         }
 
         val status = parseStatus(preferences.getString(KEY_LAST_CHECK_STATUS, null))
-            ?: UpdateStatus.FAILED
+            ?: return null
+        if (status == UpdateStatus.FAILED) {
+            return null
+        }
 
         return UpdateCheckResult(
             status = status,
@@ -39,6 +42,11 @@ class AppUpdateStore(context: Context) : UpdateStore {
 
     override fun lastCheckEpochMs(): Long? {
         if (!preferences.contains(KEY_LAST_CHECK_EPOCH_MS)) {
+            return null
+        }
+        val status = parseStatus(preferences.getString(KEY_LAST_CHECK_STATUS, null))
+            ?: return null
+        if (status == UpdateStatus.FAILED) {
             return null
         }
         val value = preferences.getLong(KEY_LAST_CHECK_EPOCH_MS, -1L)

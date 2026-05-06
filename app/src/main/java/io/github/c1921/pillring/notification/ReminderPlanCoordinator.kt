@@ -311,6 +311,12 @@ internal class ReminderPlanCoordinator(
             startDateEpochDay = startDateEpochDay
         )
 
+        try {
+            store.updatePlan(updatedPlan)
+        } catch (_: Exception) {
+            return PlanMutationResult.Failure(PlanMutationFailureReason.SAVE_FAILED)
+        }
+
         if (currentPlan.enabled) {
             val scheduled = scheduleNextPlanReminder(
                 plan = updatedPlan,
@@ -319,12 +325,6 @@ internal class ReminderPlanCoordinator(
             if (!scheduled) {
                 return PlanMutationResult.Failure(PlanMutationFailureReason.SCHEDULE_FAILED)
             }
-        }
-
-        try {
-            store.updatePlan(updatedPlan)
-        } catch (_: Exception) {
-            return PlanMutationResult.Failure(PlanMutationFailureReason.SAVE_FAILED)
         }
 
         if (updatedPlan.enabled && updatedPlan.isReminderActive) {

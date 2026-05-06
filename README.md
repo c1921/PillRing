@@ -15,12 +15,12 @@ PillRing 是基于 Android + Jetpack Compose 的多计划吃药提醒应用。
 ## 技术栈与运行要求
 
 - 语言与框架：Kotlin、Jetpack Compose、Material 3。
-- 构建工具：Gradle（Wrapper 当前为 9.1.0）。
+- 构建工具：Gradle（Wrapper 当前为 9.4.1）。
 - Android 配置：
   - `minSdk = 35`
   - `targetSdk = 36`
   - `compileSdk = 36`
-- Java/JDK：建议 JDK 17 及以上（仓库包含 toolchain 配置，当前配置为 JDK 21）。
+- Java/JDK：建议 JDK 21（仓库包含 toolchain 配置，当前配置为 JDK 21）。
 - 开发环境建议：Android Studio 最新稳定版 + 已安装 Android SDK 35/36 相关组件。
 
 ## 快速开始（开发者）
@@ -69,6 +69,11 @@ PillRing 是基于 Android + Jetpack Compose 的多计划吃药提醒应用。
 5. 服药后在确认页长按确认按钮（约 1.2 秒）停止该计划本轮提醒。
 6. 若通知被误划掉，应用会在 30 秒后尝试再次提醒；也可从首页点击处于提醒中的计划卡片进入确认页。
 7. 若提醒不稳定，进入设置页查看“权限健康检查”，按提示逐项处理。
+
+## 备份策略
+
+- 云备份：仅备份提醒计划，用于换机或重装后恢复计划；提醒日志和更新检查缓存不进入云备份。
+- 设备迁移：备份提醒计划和提醒日志；更新检查缓存不迁移。
 
 ## 项目结构
 

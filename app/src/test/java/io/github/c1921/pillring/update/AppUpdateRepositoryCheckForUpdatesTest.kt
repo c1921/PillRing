@@ -3,6 +3,7 @@ package io.github.c1921.pillring.update
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertNull
 import org.junit.Test
 
 class AppUpdateRepositoryCheckForUpdatesTest {
@@ -63,8 +64,42 @@ class AppUpdateRepositoryCheckForUpdatesTest {
         assertEquals(0, releaseClient.fetchCalls)
     }
 
+    @Test
+    fun checkForUpdates_failureDoesNotSaveResultOrThrottleNextAutoCheck() = runBlocking {
+        val store = FakeUpdateStore()
+        val releaseClient = FakeReleaseClient(null)
+        val repository = AppUpdateRepository(
+            nowProvider = { 10_000L },
+            store = store,
+            releaseClient = releaseClient
+        )
+
+        val failedResult = repository.checkForUpdates(
+            currentVersionName = "0.1.0",
+            force = false
+        )
+
+        assertEquals(UpdateStatus.FAILED, failedResult.status)
+        assertNull(store.savedResult)
+        assertEquals(false, repository.shouldSkipAutoCheck())
+
+        releaseClient.latestRelease = LatestReleasePayload(
+            versionName = "0.2.0",
+            releaseUrl = "https://example.com/release"
+        )
+
+        val retryResult = repository.checkForUpdates(
+            currentVersionName = "0.1.0",
+            force = false
+        )
+
+        assertEquals(UpdateStatus.UPDATE_AVAILABLE, retryResult.status)
+        assertEquals(2, releaseClient.fetchCalls)
+        assertNotNull(store.savedResult)
+    }
+
     private class FakeReleaseClient(
-        private val latestRelease: LatestReleasePayload?
+        var latestRelease: LatestReleasePayload?
     ) : LatestReleaseClient {
         var fetchCalls: Int = 0
 
