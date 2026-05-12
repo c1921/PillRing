@@ -12,6 +12,7 @@ object UiTestTags {
     const val SETTINGS_ABOUT_ITEM = "settings_about_item"
     const val SETTINGS_ABOUT_ICON = "settings_about_icon"
     const val SETTINGS_PERMISSION_PAGE = "settings_permission_page"
+    const val SETTINGS_PERMISSION_TIMING_CARD = "settings_permission_timing_card"
     const val SETTINGS_ABOUT_PAGE = "settings_about_page"
     const val SETTINGS_ABOUT_VERSION_VALUE = "settings_about_version_value"
     const val SETTINGS_ABOUT_UPDATE_CARD = "settings_about_update_card"

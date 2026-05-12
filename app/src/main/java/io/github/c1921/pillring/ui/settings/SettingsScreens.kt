@@ -45,8 +45,10 @@ import io.github.c1921.pillring.R
 import io.github.c1921.pillring.locale.AppLanguage
 import io.github.c1921.pillring.permission.PermissionAction
 import io.github.c1921.pillring.permission.PermissionHealthItem
+import io.github.c1921.pillring.permission.PermissionReminderTimingInfo
 import io.github.c1921.pillring.permission.PermissionState
 import io.github.c1921.pillring.ui.UiTestTags
+import io.github.c1921.pillring.ui.common.formatReminderDateTime
 import io.github.c1921.pillring.ui.theme.PillRingTheme
 import io.github.c1921.pillring.update.AppUpdateRepository
 import io.github.c1921.pillring.update.UpdateStatus
@@ -415,6 +417,7 @@ internal fun LanguageSettingsScreen(
 @OptIn(ExperimentalMaterial3Api::class)
 internal fun PermissionSettingsScreen(
     permissionItems: List<PermissionHealthItem>,
+    reminderTimingInfo: PermissionReminderTimingInfo,
     onBackClick: () -> Unit,
     onOpenPermissionSettings: (PermissionAction) -> Unit
 ) {
@@ -454,6 +457,7 @@ internal fun PermissionSettingsScreen(
             item {
                 PermissionHealthPanel(
                     items = permissionItems,
+                    reminderTimingInfo = reminderTimingInfo,
                     onOpenPermissionSettings = onOpenPermissionSettings
                 )
             }
@@ -566,6 +570,7 @@ private fun languageSummaryText(
 @Composable
 private fun PermissionHealthPanel(
     items: List<PermissionHealthItem>,
+    reminderTimingInfo: PermissionReminderTimingInfo,
     onOpenPermissionSettings: (PermissionAction) -> Unit
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -579,6 +584,8 @@ private fun PermissionHealthPanel(
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
 
+        ReminderTimingPanel(reminderTimingInfo = reminderTimingInfo)
+
         items.forEach { item ->
             PermissionHealthCard(
                 item = item,
@@ -586,6 +593,78 @@ private fun PermissionHealthPanel(
             )
         }
     }
+}
+
+@Composable
+private fun ReminderTimingPanel(reminderTimingInfo: PermissionReminderTimingInfo) {
+    ElevatedCard(
+        modifier = Modifier
+            .fillMaxWidth()
+            .testTag(UiTestTags.SETTINGS_PERMISSION_TIMING_CARD),
+        colors = CardDefaults.elevatedCardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceContainerLow
+        )
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            Text(
+                text = stringResource(R.string.permission_timing_title),
+                style = MaterialTheme.typography.titleMedium
+            )
+            TimingRow(
+                label = stringResource(R.string.permission_timing_next_label),
+                value = timingValue(
+                    planName = reminderTimingInfo.nextPlanName,
+                    epochMs = reminderTimingInfo.nextTriggerAtEpochMs,
+                    fallback = stringResource(R.string.permission_timing_none_enabled)
+                )
+            )
+            TimingRow(
+                label = stringResource(R.string.permission_timing_last_trigger_label),
+                value = timingValue(
+                    planName = reminderTimingInfo.lastTriggeredPlanName,
+                    epochMs = reminderTimingInfo.lastTriggeredAtEpochMs,
+                    fallback = stringResource(R.string.permission_timing_no_trigger_record)
+                )
+            )
+        }
+    }
+}
+
+@Composable
+private fun TimingRow(
+    label: String,
+    value: String
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelLarge
+        )
+        Text(
+            text = value,
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+    }
+}
+
+@Composable
+private fun timingValue(
+    planName: String?,
+    epochMs: Long?,
+    fallback: String
+): String {
+    if (planName.isNullOrBlank() || epochMs == null) {
+        return fallback
+    }
+    return stringResource(
+        R.string.permission_timing_value_with_plan,
+        planName,
+        formatReminderDateTime(epochMs)
+    )
 }
 
 @Composable
@@ -727,6 +806,12 @@ private fun PermissionSettingsScreenPreview() {
                     actionLabel = "Open settings",
                     action = PermissionAction.OPEN_NOTIFICATION_SETTINGS
                 )
+            ),
+            reminderTimingInfo = PermissionReminderTimingInfo(
+                nextPlanName = "Morning pills",
+                nextTriggerAtEpochMs = System.currentTimeMillis(),
+                lastTriggeredPlanName = null,
+                lastTriggeredAtEpochMs = null
             ),
             onBackClick = {},
             onOpenPermissionSettings = {}

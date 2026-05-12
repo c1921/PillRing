@@ -73,6 +73,7 @@ class MainActivitySettingsNavigationTest {
         composeRule.onNodeWithTag(UiTestTags.SETTINGS_PERMISSION_ITEM).performClick()
 
         composeRule.onNodeWithTag(UiTestTags.SETTINGS_PERMISSION_PAGE).assertIsDisplayed()
+        composeRule.onNodeWithTag(UiTestTags.SETTINGS_PERMISSION_TIMING_CARD).assertIsDisplayed()
     }
 
     @Test

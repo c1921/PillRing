@@ -39,6 +39,7 @@ import io.github.c1921.pillring.locale.AppLanguageManager
 import io.github.c1921.pillring.permission.PermissionAction
 import io.github.c1921.pillring.permission.PermissionHealthChecker
 import io.github.c1921.pillring.permission.PermissionHealthItem
+import io.github.c1921.pillring.permission.PermissionReminderTimingInfo
 import io.github.c1921.pillring.permission.PermissionSettingsNavigator
 import io.github.c1921.pillring.update.AppUpdateRepository
 import io.github.c1921.pillring.update.UpdateStatus
@@ -103,6 +104,9 @@ class MainActivity : ComponentActivity() {
             var permissionItems by remember {
                 mutableStateOf(buildPermissionItems())
             }
+            var reminderTimingInfo by remember {
+                mutableStateOf(buildReminderTimingInfo())
+            }
             var selectedLanguage by remember {
                 mutableStateOf(AppLanguageManager.getSelectedLanguage(this@MainActivity))
             }
@@ -135,6 +139,7 @@ class MainActivity : ComponentActivity() {
                         plans = loadPlans()
                         reminderLogs = loadReminderLogs()
                         permissionItems = buildPermissionItems()
+                        reminderTimingInfo = buildReminderTimingInfo()
                         selectedLanguage =
                             AppLanguageManager.getSelectedLanguage(this@MainActivity)
                         effectiveLanguageForSummary =
@@ -294,6 +299,7 @@ class MainActivity : ComponentActivity() {
                                 deletePlan(plan.id)
                                 plans = loadPlans()
                                 permissionItems = buildPermissionItems()
+                                reminderTimingInfo = buildReminderTimingInfo()
                             },
                             onMoveUpClick = { plan ->
                                 planCoordinator.movePlanUp(plan.id)
@@ -304,9 +310,17 @@ class MainActivity : ComponentActivity() {
                                 plans = loadPlans()
                             },
                             onPlanEnabledChange = { plan, enabled ->
-                                setPlanEnabled(planId = plan.id, enabled = enabled)
+                                val changed = setPlanEnabled(planId = plan.id, enabled = enabled)
                                 plans = loadPlans()
                                 permissionItems = buildPermissionItems()
+                                reminderTimingInfo = buildReminderTimingInfo()
+                                if (
+                                    enabled &&
+                                    changed &&
+                                    shouldOpenPermissionHealth(permissionItems)
+                                ) {
+                                    currentScreen = AppScreen.SETTINGS_PERMISSION
+                                }
                             },
                             onOpenLogClick = {
                                 reminderLogs = loadReminderLogs()
@@ -314,6 +328,7 @@ class MainActivity : ComponentActivity() {
                             },
                             onOpenSettingsClick = {
                                 permissionItems = buildPermissionItems()
+                                reminderTimingInfo = buildReminderTimingInfo()
                                 currentScreen = AppScreen.SETTINGS_OVERVIEW
                             },
                             onOpenReminderConfirmFromPlanCard = { plan ->
@@ -378,6 +393,7 @@ class MainActivity : ComponentActivity() {
                     AppScreen.SETTINGS_PERMISSION -> {
                         PermissionSettingsScreen(
                             permissionItems = permissionItems,
+                            reminderTimingInfo = reminderTimingInfo,
                             onBackClick = { currentScreen = AppScreen.SETTINGS_OVERVIEW },
                             onOpenPermissionSettings = ::openPermissionSettings,
                         )
@@ -404,10 +420,12 @@ class MainActivity : ComponentActivity() {
                                 onConfirmCommitted = {
                                     confirmStopReminder(reminderPlan.id)
                                     reminderLogs = loadReminderLogs()
+                                    reminderTimingInfo = buildReminderTimingInfo()
                                 },
                                 onAutoExit = {
                                     plans = loadPlans()
                                     permissionItems = buildPermissionItems()
+                                    reminderTimingInfo = buildReminderTimingInfo()
                                     reminderConfirmPlanId = null
                                     currentScreen = AppScreen.HOME
                                 }
@@ -448,6 +466,7 @@ class MainActivity : ComponentActivity() {
                                 repeatMode,
                                 intervalDays,
                                 startDateEpochDay ->
+                            val isNewPlan = editor.planId == null
                             val saved = if (editor.planId == null) {
                                 addPlan(
                                     name = name,
@@ -471,8 +490,15 @@ class MainActivity : ComponentActivity() {
 
                             plans = loadPlans()
                             permissionItems = buildPermissionItems()
+                            reminderTimingInfo = buildReminderTimingInfo()
                             if (saved) {
                                 planEditorState = null
+                                if (
+                                    isNewPlan &&
+                                    shouldOpenPermissionHealth(permissionItems)
+                                ) {
+                                    currentScreen = AppScreen.SETTINGS_PERMISSION
+                                }
                             }
                         }
                     )
@@ -821,6 +847,14 @@ class MainActivity : ComponentActivity() {
 
     private fun buildPermissionItems(): List<PermissionHealthItem> {
         return PermissionHealthChecker.buildItems(this)
+    }
+
+    private fun buildReminderTimingInfo(): PermissionReminderTimingInfo {
+        return PermissionHealthChecker.buildReminderTimingInfo(this)
+    }
+
+    private fun shouldOpenPermissionHealth(items: List<PermissionHealthItem>): Boolean {
+        return PermissionHealthChecker.shouldOpenHealthPageAfterReminderEnabled(items)
     }
 
     private fun openPermissionSettings(action: PermissionAction) {
